@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Garden Keepers – Cooperative Garden Game</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=Nunito:wght@400;600;700&display=swap');
+
+  :root {
+    --soil: #5c3d1e;
+    --grass: #2d7a3a;
+    --leaf: #4caf50;
+    --sky: #87ceeb;
+    --sun: #f9c74f;
+    --water: #4fc3f7;
+    --bark: #8b5e3c;
+    --petal: #f06292;
+    --seed: #a5845b;
+    --amber: #e9a32b;
+    --danger: #e53935;
+    --health-green: #43a047;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: #1a2e0e;
+    color: #f0ead6;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── LOBBY / ROLE SELECT ─── */
+  #lobby {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at 60% 30%, #2d5a1b 0%, #0e1a08 70%);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  #lobby::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 180px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 180'%3E%3Cpath fill='%235c3d1e' d='M0,120 Q180,60 360,100 Q540,140 720,90 Q900,40 1080,110 Q1260,160 1440,80 L1440,180 L0,180Z'/%3E%3C/svg%3E") no-repeat bottom/cover;
+  }
+  #lobby h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 6vw, 4rem);
+    color: #b5e48c;
+    text-shadow: 0 0 40px #4caf5080;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  #lobby .subtitle {
+    color: #90c97c;
+    font-size: 1.1rem;
+    margin-bottom: 40px;
+    font-style: italic;
+    text-align: center;
+  }
+  .role-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    width: 100%;
+    max-width: 900px;
+    margin-bottom: 30px;
+    position: relative;
+    z-index: 1;
+  }
+  .role-card {
+    background: rgba(255,255,255,0.07);
+    border: 2px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 24px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .25s;
+    backdrop-filter: blur(6px);
+  }
+  .role-card:hover { transform: translateY(-6px); border-color: rgba(255,255,255,0.35); background: rgba(255,255,255,0.12); }
+  .role-card.selected { border-color: #b5e48c; background: rgba(181,228,140,0.15); box-shadow: 0 0 24px #b5e48c50; }
+  .role-icon { font-size: 3rem; margin-bottom: 10px; }
+  .role-name { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: #d8f3b0; margin-bottom: 6px; }
+  .role-desc { font-size: 0.82rem; color: #9bbf80; line-height: 1.4; }
+
+  .mode-buttons { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; position: relative; z-index: 1; }
+  .btn-tv {
+    background: linear-gradient(135deg, #2d7a3a, #1b5e28);
+    border: none; border-radius: 14px; color: #d8f3b0;
+    font-family: 'Nunito', sans-serif; font-size: 1rem; font-weight: 700;
+    padding: 14px 32px; cursor: pointer; transition: all .2s;
+    box-shadow: 0 4px 20px #2d7a3a50;
+  }
+  .btn-tv:hover { transform: translateY(-2px); box-shadow: 0 8px 30px #2d7a3a80; }
+  .btn-phone {
+    background: linear-gradient(135deg, #4a3012, #2e1c07);
+    border: 2px solid #8b5e3c; border-radius: 14px; color: #f5d9a8;
+    font-family: 'Nunito', sans-serif; font-size: 1rem; font-weight: 700;
+    padding: 14px 32px; cursor: pointer; transition: all .2s;
+  }
+  .btn-phone:hover { transform: translateY(-2px); background: linear-gradient(135deg, #5a3a18, #3a2210); }
+
+  /* ─── TV SCREEN ─── */
+  #tv-screen {
+    display: none;
+    min-height: 100vh;
+    background: linear-gradient(180deg, #87ceeb 0%, #c8e9f7 40%, #6abf7b 40%, #2d7a3a 60%, #5c3d1e 80%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .sun-orb {
+    position: absolute; top: 30px; right: 80px;
+    width: 80px; height: 80px;
+    background: radial-gradient(circle, #fff5c0, #f9c74f);
+    border-radius: 50%;
+    box-shadow: 0 0 60px #f9c74f80, 0 0 120px #f9c74f30;
+    transition: opacity 1s, filter 1s;
+  }
+
+  .shade-overlay {
+    position: absolute; top: 0; left: 0; right: 0; height: 40%;
+    background: rgba(30,20,5,0);
+    pointer-events: none; transition: background 1s;
+  }
+
+  /* Garden plots */
+  .garden-area {
+    position: absolute; bottom: 120px; left: 0; right: 0;
+    display: flex; justify-content: space-around; align-items: flex-end;
+    padding: 0 40px;
+  }
+  .plot {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    transition: all 0.5s;
+  }
+  .plant {
+    font-size: 2.8rem;
+    transition: all 0.6s;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+    transform-origin: bottom center;
+  }
+  .plot-label {
+    font-size: 0.7rem; color: #d8c4a0; background: rgba(0,0,0,0.3);
+    border-radius: 8px; padding: 2px 8px; white-space: nowrap;
+  }
+
+  /* Animals */
+  .animal {
+    position: absolute; bottom: 140px;
+    font-size: 2rem; transition: all 1.5s ease;
+    cursor: default;
+  }
+
+  /* HUD */
+  .tv-hud {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 30px;
+    background: rgba(0,0,0,0.35); backdrop-filter: blur(4px);
+  }
+  .hud-title { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: #b5e48c; }
+  .hud-stats { display: flex; gap: 20px; align-items: center; }
+  .stat-pill {
+    background: rgba(255,255,255,0.12); border-radius: 20px;
+    padding: 4px 14px; font-size: 0.85rem; font-weight: 700;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .health-bar-wrap { width: 160px; height: 12px; background: rgba(255,255,255,0.2); border-radius: 6px; overflow: hidden; }
+  .health-bar { height: 100%; background: linear-gradient(90deg, #43a047, #b5e48c); border-radius: 6px; transition: width 0.8s; }
+
+  /* Problem banner */
+  .problem-banner {
+    position: absolute; top: 64px; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(135deg, rgba(229,57,53,0.9), rgba(183,28,28,0.9));
+    border: 2px solid #ef9a9a; border-radius: 16px;
+    padding: 12px 28px; font-size: 1.1rem; font-weight: 700;
+    color: #fff; text-align: center; max-width: 500px;
+    box-shadow: 0 4px 30px rgba(229,57,53,0.5);
+    animation: pulse-banner 1.5s infinite alternate;
+    display: none; z-index: 10;
+  }
+  @keyframes pulse-banner {
+    from { box-shadow: 0 4px 20px rgba(229,57,53,0.4); }
+    to   { box-shadow: 0 4px 40px rgba(229,57,53,0.8); }
+  }
+
+  /* Round timer */
+  .round-info {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 20px;
+    background: rgba(0,0,0,0.4); border-radius: 20px; padding: 10px 30px;
+    backdrop-filter: blur(4px);
+  }
+  .timer-ring { font-size: 2rem; font-weight: 700; color: #f9c74f; font-family: 'Playfair Display', serif; }
+  .timer-ring.urgent { color: #ef5350; animation: blink .5s infinite alternate; }
+  @keyframes blink { to { opacity: 0.4; } }
+  .round-label { font-size: 0.9rem; color: #b5e48c; }
+
+  /* Score flash */
+  .score-flash {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    font-family: 'Playfair Display', serif; font-size: 3rem;
+    color: #b5e48c; text-shadow: 0 0 40px #b5e48c;
+    pointer-events: none; opacity: 0; z-index: 20;
+    transition: opacity 0.3s;
+  }
+
+  /* Action feedback */
+  .action-log {
+    position: absolute; right: 20px; top: 100px; bottom: 100px;
+    width: 220px; overflow: hidden;
+    display: flex; flex-direction: column; gap: 6px; justify-content: flex-end;
+  }
+  .action-entry {
+    background: rgba(0,0,0,0.45); border-radius: 10px; padding: 7px 12px;
+    font-size: 0.78rem; border-left: 3px solid #b5e48c;
+    animation: slide-in .4s ease;
+  }
+  .action-entry.bad { border-left-color: #ef5350; }
+  @keyframes slide-in {
+    from { transform: translateX(30px); opacity: 0; }
+    to   { transform: translateX(0); opacity: 1; }
+  }
+
+  /* ─── PHONE SCREEN ─── */
+  #phone-screen {
+    display: none;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  .phone-header {
+    padding: 20px 20px 16px;
+    text-align: center;
+    position: relative;
+  }
+  .phone-role-badge {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.12); border-radius: 40px;
+    padding: 8px 20px; margin-bottom: 10px;
+  }
+  .phone-role-icon { font-size: 1.8rem; }
+  .phone-role-name { font-family: 'Playfair Display', serif; font-size: 1.2rem; }
+  .phone-clue-box {
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 16px; padding: 14px 18px; margin: 0 16px 16px;
+    font-size: 0.9rem; line-height: 1.5; color: #e8f5d0;
+    min-height: 70px;
+  }
+  .clue-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .1em; color: #9bbf80; margin-bottom: 6px; }
+
+  .phone-actions { padding: 0 16px; display: flex; flex-direction: column; gap: 12px; }
+  .action-btn {
+    width: 100%; padding: 16px; border: none; border-radius: 16px;
+    font-family: 'Nunito', sans-serif; font-size: 1rem; font-weight: 700;
+    cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 12px;
+    position: relative; overflow: hidden;
+  }
+  .action-btn::after {
+    content: ''; position: absolute; inset: 0;
+    background: rgba(255,255,255,0); transition: background .15s;
+  }
+  .action-btn:active::after { background: rgba(255,255,255,0.15); }
+  .action-btn:active { transform: scale(0.97); }
+  .action-btn .btn-icon { font-size: 1.6rem; flex-shrink: 0; }
+  .action-btn .btn-text { text-align: left; }
+  .action-btn .btn-title { display: block; font-size: 1rem; }
+  .action-btn .btn-sub { display: block; font-size: 0.75rem; opacity: .75; margin-top: 2px; }
+  .action-btn.cooldown { opacity: 0.5; pointer-events: none; }
+
+  .phone-round-info {
+    display: flex; justify-content: space-between; align-items: center;
+    margin: 0 16px 14px; padding: 10px 16px;
+    background: rgba(255,255,255,0.08); border-radius: 12px;
+    font-size: 0.85rem;
+  }
+  .phone-round-info .t { color: #f9c74f; font-weight: 700; font-size: 1.1rem; }
+
+  /* Role-specific themes */
+  .theme-water { background: linear-gradient(160deg, #0d2b4a 0%, #0a1e35 100%); }
+  .theme-water .phone-header { background: linear-gradient(135deg, #0d47a1, #1565c0); }
+  .theme-water .action-btn:nth-child(1) { background: linear-gradient(135deg, #1565c0, #0d47a1); color: #e3f2fd; }
+  .theme-water .action-btn:nth-child(2) { background: linear-gradient(135deg, #0288d1, #01579b); color: #e1f5fe; }
+  .theme-water .action-btn:nth-child(3) { background: linear-gradient(135deg, #006064, #004d40); color: #e0f7fa; }
+
+  .theme-sun { background: linear-gradient(160deg, #2a1c00 0%, #1a1000 100%); }
+  .theme-sun .phone-header { background: linear-gradient(135deg, #f57f17, #e65100); }
+  .theme-sun .action-btn:nth-child(1) { background: linear-gradient(135deg, #f9a825, #f57f17); color: #1a0a00; }
+  .theme-sun .action-btn:nth-child(2) { background: linear-gradient(135deg, #8d6e0a, #6d5200); color: #fff8e1; }
+  .theme-sun .action-btn:nth-child(3) { background: linear-gradient(135deg, #bf360c, #7f2700); color: #fbe9e7; }
+
+  .theme-seed { background: linear-gradient(160deg, #0d2212 0%, #071508 100%); }
+  .theme-seed .phone-header { background: linear-gradient(135deg, #2e7d32, #1b5e20); }
+  .theme-seed .action-btn:nth-child(1) { background: linear-gradient(135deg, #388e3c, #2e7d32); color: #f1f8e9; }
+  .theme-seed .action-btn:nth-child(2) { background: linear-gradient(135deg, #558b2f, #33691e); color: #f9fbe7; }
+  .theme-seed .action-btn:nth-child(3) { background: linear-gradient(135deg, #4caf50, #2e7d32); color: #e8f5e9; }
+
+  .theme-animal { background: linear-gradient(160deg, #260f01 0%, #150800 100%); }
+  .theme-animal .phone-header { background: linear-gradient(135deg, #8d4e00, #6d3800); }
+  .theme-animal .action-btn:nth-child(1) { background: linear-gradient(135deg, #bf6f10, #8d4e00); color: #fff3e0; }
+  .theme-animal .action-btn:nth-child(2) { background: linear-gradient(135deg, #795548, #5d4037); color: #efebe9; }
+  .theme-animal .action-btn:nth-child(3) { background: linear-gradient(135deg, #d84315, #bf360c); color: #fbe9e7; }
+
+  /* Feedback toast */
+  .toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.8); color: #fff; padding: 12px 24px;
+    border-radius: 24px; font-weight: 700; font-size: 0.95rem;
+    pointer-events: none; opacity: 0; transition: opacity .3s;
+    z-index: 100; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+
+  /* End screen */
+  #end-screen {
+    display: none; min-height: 100vh;
+    background: radial-gradient(ellipse at 50% 40%, #1b4d20 0%, #061008 70%);
+    flex-direction: column; align-items: center; justify-content: center;
+    padding: 40px 20px; text-align: center;
+  }
+  .end-icon { font-size: 6rem; margin-bottom: 20px; }
+  .end-title { font-family: 'Playfair Display', serif; font-size: 3rem; color: #b5e48c; margin-bottom: 10px; }
+  .end-subtitle { font-size: 1.2rem; color: #90c97c; margin-bottom: 30px; }
+  .end-stats { display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; margin-bottom: 40px; }
+  .end-stat { background: rgba(255,255,255,0.08); border-radius: 16px; padding: 20px 30px; }
+  .end-stat .val { font-size: 2.5rem; font-weight: 700; color: #f9c74f; font-family: 'Playfair Display', serif; }
+  .end-stat .lbl { font-size: 0.85rem; color: #9bbf80; margin-top: 4px; }
+
+  /* Utility */
+  .hidden { display: none !important; }
+  .flex { display: flex; }
+
+  /* Grass blades decoration */
+  .grass-strip {
+    position: absolute; bottom: 80px; left: 0; right: 0; height: 60px;
+    background: repeating-linear-gradient(
+      to right,
+      transparent, transparent 18px,
+      #2d7a3a 18px, #2d7a3a 20px
+    );
+    opacity: 0.5; pointer-events: none;
+  }
+
+  /* Water puddle effect */
+  @keyframes ripple {
+    0% { transform: scale(0.8); opacity: 0.8; }
+    100% { transform: scale(1.8); opacity: 0; }
+  }
+  .ripple-effect {
+    position: absolute; width: 60px; height: 60px; border-radius: 50%;
+    border: 3px solid #4fc3f7; pointer-events: none;
+    animation: ripple 0.8s ease-out forwards;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ LOBBY ═══════════════ -->
+<div id="lobby">
+  <h1>🌿 Garden Keepers</h1>
+  <p class="subtitle">A cooperative garden game for 2–4 players</p>
+
+  <div class="role-grid">
+    <div class="role-card" data-role="water" onclick="selectRole('water',this)">
+      <div class="role-icon">💧</div>
+      <div class="role-name">Water Keeper</div>
+      <div class="role-desc">Controls watering. Receives soil moisture clues only you can see.</div>
+    </div>
+    <div class="role-card" data-role="sun" onclick="selectRole('sun',this)">
+      <div class="role-icon">☀️</div>
+      <div class="role-name">Sun Guide</div>
+      <div class="role-desc">Controls sunlight & shade levels. Sees light-intensity readings.</div>
+    </div>
+    <div class="role-card" data-role="seed" onclick="selectRole('seed',this)">
+      <div class="role-icon">🌱</div>
+      <div class="role-name">Seed Planter</div>
+      <div class="role-desc">Plants new flowers. Sees growth pattern data for each plot.</div>
+    </div>
+    <div class="role-card" data-role="animal" onclick="selectRole('animal',this)">
+      <div class="role-icon">🦊</div>
+      <div class="role-name">Animal Guardian</div>
+      <div class="role-desc">Moves animals away. Sees animal location & behavior clues.</div>
+    </div>
+  </div>
+
+  <div class="mode-buttons">
+    <button class="btn-tv" onclick="launchTV()">📺 Open TV Screen</button>
+    <button class="btn-phone" onclick="launchPhone()">📱 Open My Phone View</button>
+  </div>
+</div>
+
+<!-- ═══════════════ TV SCREEN ═══════════════ -->
+<div id="tv-screen">
+  <div class="shade-overlay" id="shadeOverlay"></div>
+  <div class="sun-orb" id="sunOrb"></div>
+
+  <div class="tv-hud">
+    <div class="hud-title">🌿 Garden Keepers</div>
+    <div class="hud-stats">
+      <div class="stat-pill">🏆 <span id="tvScore">0</span> pts</div>
+      <div class="stat-pill">
+        🌿 Garden Health
+        <div class="health-bar-wrap"><div class="health-bar" id="healthBar" style="width:100%"></div></div>
+      </div>
+      <div class="stat-pill">🔁 Round <span id="tvRound">1</span>/5</div>
+    </div>
+    <button class="btn-tv" onclick="goLobby()" style="padding:8px 18px;font-size:.85rem;">← Back</button>
+  </div>
+
+  <div class="problem-banner" id="problemBanner"></div>
+
+  <div class="garden-area" id="gardenArea"></div>
+  <div class="grass-strip"></div>
+
+  <div class="action-log" id="actionLog"></div>
+  <div class="score-flash" id="scoreFlash"></div>
+
+  <div class="round-info">
+    <div>
+      <div class="round-label">Round <span id="tvRound2">1</span> of 5</div>
+    </div>
+    <div class="timer-ring" id="tvTimer">3:00</div>
+    <div id="tvRoundBtn">
+      <button class="btn-tv" onclick="startRound()" style="font-size:.9rem;padding:10px 20px;">▶ Start Round</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ PHONE SCREEN ═══════════════ -->
+<div id="phone-screen">
+  <div class="phone-header" id="phoneHeader">
+    <div class="phone-role-badge">
+      <span class="phone-role-icon" id="phoneIcon"></span>
+      <span class="phone-role-name" id="phoneName"></span>
+    </div>
+  </div>
+
+  <div class="phone-round-info">
+    <span>Round <strong id="pRound">1</strong>/5</span>
+    <span class="t" id="pTimer">3:00</span>
+    <span>Score: <strong id="pScore">0</strong></span>
+  </div>
+
+  <div class="phone-clue-box">
+    <div class="clue-label">🔍 Your Private Clue</div>
+    <div id="phoneClue">Waiting for round to start…</div>
+  </div>
+
+  <div class="phone-actions" id="phoneActions"></div>
+</div>
+
+<!-- ═══════════════ END SCREEN ═══════════════ -->
+<div id="end-screen" style="display:none;">
+  <div class="end-icon" id="endIcon">🌻</div>
+  <div class="end-title" id="endTitle">Garden Thrives!</div>
+  <div class="end-subtitle" id="endSubtitle">Excellent teamwork!</div>
+  <div class="end-stats">
+    <div class="end-stat"><div class="val" id="finalScore">0</div><div class="lbl">Total Points</div></div>
+    <div class="end-stat"><div class="val" id="finalHealth">0</div><div class="lbl">Final Health %</div></div>
+    <div class="end-stat"><div class="val" id="finalRounds">5</div><div class="lbl">Rounds Played</div></div>
+  </div>
+  <button class="btn-tv" onclick="location.reload()" style="font-size:1.1rem;padding:16px 40px;">🌱 Play Again</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════════════════════
+const ROLES = {
+  water:  { name: 'Water Keeper',     icon: '💧', theme: 'theme-water' },
+  sun:    { name: 'Sun Guide',        icon: '☀️', theme: 'theme-sun'   },
+  seed:   { name: 'Seed Planter',     icon: '🌱', theme: 'theme-seed'  },
+  animal: { name: 'Animal Guardian',  icon: '🦊', theme: 'theme-animal'},
+};
+
+const ACTIONS = {
+  water: [
+    { id:'water_little', icon:'🚿', title:'Light Sprinkle',    sub:'Water plants gently',           effect: 'water_little' },
+    { id:'water_full',   icon:'💦', title:'Full Watering',     sub:'Drench all garden plots',       effect: 'water_full'   },
+    { id:'water_stop',   icon:'🚱', title:'Stop Water',        sub:'Turn off irrigation system',    effect: 'water_stop'   },
+  ],
+  sun: [
+    { id:'sun_open',  icon:'🌤️', title:'Open Shade',     sub:'Let in more sunlight',         effect: 'sun_open'  },
+    { id:'sun_half',  icon:'⛅',  title:'Partial Shade',  sub:'Moderate sunlight level',       effect: 'sun_half'  },
+    { id:'sun_close', icon:'🌑', title:'Full Shade',     sub:'Block all direct sunlight',     effect: 'sun_close' },
+  ],
+  seed: [
+    { id:'seed_flower', icon:'🌸', title:'Plant Flower',   sub:'Sow a new flowering seed',     effect: 'seed_flower' },
+    { id:'seed_veg',    icon:'🥦', title:'Plant Veggie',   sub:'Plant a vegetable seedling',   effect: 'seed_veg'    },
+    { id:'seed_tree',   icon:'🌳', title:'Plant Tree',     sub:'Grow a new shade tree',        effect: 'seed_tree'   },
+  ],
+  animal: [
+    { id:'animal_shoo',  icon:'🙌', title:'Shoo Gently',   sub:'Wave animals away softly',      effect: 'animal_shoo'  },
+    { id:'animal_fence', icon:'🚧', title:'Set Fence',      sub:'Block animal path with fence', effect: 'animal_fence' },
+    { id:'animal_lure',  icon:'🥕', title:'Lure Away',     sub:'Use food to redirect animals',  effect: 'animal_lure'  },
+  ],
+};
+
+// Problems & clues
+const PROBLEM_SETS = [
+  {
+    problem: '🌵 Plants are wilting — the soil is bone dry!',
+    solution: 'water_full',
+    clues: {
+      water:  'Soil moisture sensor: CRITICAL LOW (4%). Full irrigation needed immediately.',
+      sun:    'Sunlight meter reads: HIGH (87%). Plants seem stressed despite good light.',
+      seed:   'Growth pattern anomaly: all plots show drought-stress curl in leaves.',
+      animal: 'No animals nearby. Ground looks cracked and parched around the plot edges.',
+    },
+    hint: '💧 Team: The garden needs LOTS of water right now!'
+  },
+  {
+    problem: '🌊 Root rot detected — garden is waterlogged!',
+    solution: 'water_stop',
+    clues: {
+      water:  'Soil moisture sensor: CRITICAL HIGH (98%). Stop all irrigation!',
+      sun:    'Sunlight blocked by clouds today. Evaporation is minimal — water pools forming.',
+      seed:   'Growth pattern: roots showing yellow discoloration, typical of over-watering.',
+      animal: 'Frogs spotted in garden — attracted by standing water between the plots.',
+    },
+    hint: '🚱 Team: Stop the water — garden is flooded!'
+  },
+  {
+    problem: '🐇 Rabbits are nibbling the seedlings!',
+    solution: 'animal_fence',
+    clues: {
+      water:  'Soil is perfect: 62% moisture. But plants keep disappearing at ground level.',
+      sun:    'Light levels optimal. But something is disturbing the young plants.',
+      seed:   'Growth pattern: seedlings vanish overnight. Bite marks on plant stems.',
+      animal: 'Rabbit tracks spotted at 3 entry points. They keep returning. Fence is best solution.',
+    },
+    hint: '🚧 Team: Animals are attacking — block them with a fence!'
+  },
+  {
+    problem: '🔥 Plants are scorching in the blazing sun!',
+    solution: 'sun_half',
+    clues: {
+      water:  'Moisture okay at 55%. But leaf surfaces show heat-blister burns.',
+      sun:    'UV index: 11 (EXTREME). Light meter: 1400 lux. Partial shade recommended.',
+      seed:   'Growth pattern: flowers closing prematurely — classic sun scorch behavior.',
+      animal: 'No animals visible. Plants look bleached and dried on the sun-facing side.',
+    },
+    hint: '⛅ Team: Too much sun! Apply partial shade!'
+  },
+  {
+    problem: '🌑 Plants starving for sunlight — too much shade!',
+    solution: 'sun_open',
+    clues: {
+      water:  'Soil damp at 70%. Possibly too wet because sun isn\'t drying anything out.',
+      sun:    'Light meter reading: 120 lux (dangerously LOW). Shade panels need to open.',
+      seed:   'Growth pattern: stems stretching tall and thin — classic etiolation from lack of light.',
+      animal: 'All quiet. But plants are pale yellow instead of healthy green.',
+    },
+    hint: '🌤️ Team: Open the shade — plants need light!'
+  },
+  {
+    problem: '🌱 Empty plots need new life — plant something!',
+    solution: 'seed_flower',
+    clues: {
+      water:  'Perfect moisture at 68%. Soil ready for new planting. Waiting for seeds.',
+      sun:    'Ideal light conditions: 650 lux, UV index 4. Perfect planting weather.',
+      seed:   'Growth pattern monitor shows 3 empty plots. Flower seeds will thrive here.',
+      animal: 'Animals are calm and far away. Planting window is NOW.',
+    },
+    hint: '🌸 Team: Plant flowers in the empty plots!'
+  },
+];
+
+let state = {
+  mode: null,         // 'tv' | 'phone'
+  role: null,
+  round: 1,
+  score: 0,
+  health: 100,
+  timerSec: 180,
+  timerInterval: null,
+  roundActive: false,
+  currentProblem: null,
+  plotsData: [],
+  animalsOnScreen: [],
+  actionsThisRound: [],
+  cooldowns: {},
+};
+
+// Shared via localStorage (simulates cross-device sync for same browser demo)
+function syncState() {
+  localStorage.setItem('gk_state', JSON.stringify({
+    round: state.round,
+    score: state.score,
+    health: state.health,
+    timerSec: state.timerSec,
+    roundActive: state.roundActive,
+    currentProblem: state.currentProblem,
+    actionsThisRound: state.actionsThisRound,
+  }));
+}
+function loadState() {
+  const s = localStorage.getItem('gk_state');
+  if (!s) return;
+  const d = JSON.parse(s);
+  Object.assign(state, d);
+}
+
+// ═══════════════════════════════════════════════
+//  ROLE SELECTION
+// ═══════════════════════════════════════════════
+let selectedRole = null;
+
+function selectRole(role, el) {
+  document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedRole = role;
+}
+
+function goLobby() {
+  document.getElementById('tv-screen').style.display = 'none';
+  document.getElementById('phone-screen').style.display = 'none';
+  document.getElementById('end-screen').style.display = 'none';
+  document.getElementById('lobby').style.display = 'flex';
+  clearInterval(state.timerInterval);
+}
+
+// ═══════════════════════════════════════════════
+//  TV LAUNCH
+// ═══════════════════════════════════════════════
+function launchTV() {
+  document.getElementById('lobby').style.display = 'none';
+  document.getElementById('tv-screen').style.display = 'block';
+  state.mode = 'tv';
+  state.round = 1; state.score = 0; state.health = 100;
+  state.roundActive = false;
+  renderGarden();
+  updateTVHUD();
+  syncState();
+  // Poll for actions
+  setInterval(pollActions, 1000);
+}
+
+function renderGarden() {
+  const ga = document.getElementById('gardenArea');
+  const plants = ['🌸','🌻','🌺','🌼','🌷','🪴','🌿','🍀'];
+  ga.innerHTML = '';
+  state.plotsData = [];
+  for (let i = 0; i < 6; i++) {
+    const health = 0.6 + Math.random() * 0.4;
+    state.plotsData.push({ health, plant: plants[i % plants.length], withered: false });
+    const plot = document.createElement('div');
+    plot.className = 'plot';
+    plot.id = 'plot-' + i;
+    plot.innerHTML = `<div class="plant" id="plant-${i}" style="opacity:${health}">${plants[i % plants.length]}</div>
+                      <div class="plot-label">Plot ${i+1}</div>`;
+    ga.appendChild(plot);
+  }
+}
+
+function updateTVHUD() {
+  document.getElementById('tvScore').textContent = state.score;
+  document.getElementById('tvRound').textContent = state.round;
+  document.getElementById('tvRound2').textContent = state.round;
+  document.getElementById('healthBar').style.width = state.health + '%';
+  document.getElementById('healthBar').style.background =
+    state.health > 60 ? 'linear-gradient(90deg, #43a047, #b5e48c)'
+    : state.health > 30 ? 'linear-gradient(90deg, #f9a825, #fdd835)'
+    : 'linear-gradient(90deg, #e53935, #ef9a9a)';
+}
+
+function startRound() {
+  if (state.round > 5) { endGame(); return; }
+  document.getElementById('tvRoundBtn').innerHTML = '';
+  state.roundActive = true;
+  state.timerSec = 180;
+  state.actionsThisRound = [];
+
+  // Pick problem
+  const prob = PROBLEM_SETS[Math.floor(Math.random() * PROBLEM_SETS.length)];
+  state.currentProblem = prob;
+  syncState();
+
+  // Show banner
+  const banner = document.getElementById('problemBanner');
+  banner.textContent = prob.problem;
+  banner.style.display = 'block';
+
+  // Spawn animal if relevant
+  if (prob.solution.startsWith('animal')) spawnAnimal();
+
+  // Timer
+  clearInterval(state.timerInterval);
+  state.timerInterval = setInterval(() => {
+    state.timerSec--;
+    updateTimer();
+    syncState();
+    if (state.timerSec <= 0) endRound(false);
+  }, 1000);
+}
+
+function updateTimer() {
+  const m = Math.floor(state.timerSec / 60);
+  const s = state.timerSec % 60;
+  const str = m + ':' + String(s).padStart(2,'0');
+  const el = document.getElementById('tvTimer');
+  el.textContent = str;
+  el.className = 'timer-ring' + (state.timerSec < 30 ? ' urgent' : '');
+  const p = document.getElementById('pTimer');
+  if (p) p.textContent = str;
+}
+
+function spawnAnimal() {
+  const animals = ['🐇','🐿️','🦔','🦡'];
+  const a = document.createElement('div');
+  a.className = 'animal';
+  a.id = 'tv-animal';
+  a.textContent = animals[Math.floor(Math.random() * animals.length)];
+  a.style.left = (30 + Math.random() * 40) + '%';
+  document.getElementById('tv-screen').appendChild(a);
+}
+
+function removeAnimal() {
+  const a = document.getElementById('tv-animal');
+  if (a) { a.style.left = '-10%'; setTimeout(() => a.remove(), 1500); }
+}
+
+function pollActions() {
+  loadState();
+  const actions = state.actionsThisRound || [];
+  // Render latest action if new
+  if (actions.length > 0) {
+    const latest = actions[actions.length - 1];
+    if (!latest._rendered) {
+      latest._rendered = true;
+      applyAction(latest);
+    }
+  }
+  updateTVHUD();
+  if (state.timerSec > 0) updateTimer();
+}
+
+function applyAction(action) {
+  const prob = state.currentProblem;
+  const correct = prob && action.effect === prob.solution;
+
+  if (correct) {
+    state.score += 50;
+    state.health = Math.min(100, state.health + 10);
+    flashScore('+50 ✓');
+    logAction(action.label + ' — Correct! 🌿', false);
+    healPlants();
+    if (action.effect.startsWith('animal')) removeAnimal();
+    if (action.effect.startsWith('sun')) adjustSun(action.effect);
+    if (action.effect.startsWith('water')) waterEffect();
+    setTimeout(() => endRound(true), 2000);
+  } else {
+    state.health = Math.max(0, state.health - 15);
+    state.score = Math.max(0, state.score - 10);
+    flashScore('-10 ✗');
+    logAction(action.label + ' — Wrong choice! 🥀', true);
+    witherPlant();
+    if (state.health <= 0) { endGame(); }
+  }
+  updateTVHUD();
+  syncState();
+}
+
+function flashScore(txt) {
+  const el = document.getElementById('scoreFlash');
+  el.textContent = txt;
+  el.style.opacity = '1';
+  el.style.color = txt.includes('+') ? '#b5e48c' : '#ef5350';
+  setTimeout(() => el.style.opacity = '0', 1500);
+}
+
+function logAction(msg, bad) {
+  const log = document.getElementById('actionLog');
+  const entry = document.createElement('div');
+  entry.className = 'action-entry' + (bad ? ' bad' : '');
+  entry.textContent = msg;
+  log.appendChild(entry);
+  if (log.children.length > 6) log.removeChild(log.firstChild);
+}
+
+function healPlants() {
+  for (let i = 0; i < 6; i++) {
+    const p = document.getElementById('plant-' + i);
+    if (p) { p.style.opacity = '1'; p.style.transform = 'scale(1.15)'; setTimeout(() => p.style.transform='scale(1)',500); }
+  }
+}
+function witherPlant() {
+  const idx = Math.floor(Math.random() * 6);
+  const p = document.getElementById('plant-' + idx);
+  if (p) { p.style.opacity = '0.4'; p.textContent = '🥀'; }
+}
+function adjustSun(effect) {
+  const shade = document.getElementById('shadeOverlay');
+  const orb = document.getElementById('sunOrb');
+  if (effect === 'sun_open') { shade.style.background='rgba(0,0,0,0)'; orb.style.filter='brightness(1.2)'; }
+  else if (effect === 'sun_half') { shade.style.background='rgba(30,20,5,0.3)'; orb.style.filter='brightness(0.8)'; }
+  else { shade.style.background='rgba(20,15,5,0.65)'; orb.style.filter='brightness(0.2)'; }
+}
+function waterEffect() {
+  const ga = document.getElementById('gardenArea');
+  const rip = document.createElement('div');
+  rip.className = 'ripple-effect';
+  rip.style.left = '45%'; rip.style.bottom = '60px';
+  document.getElementById('tv-screen').appendChild(rip);
+  setTimeout(() => rip.remove(), 900);
+}
+
+function endRound(success) {
+  clearInterval(state.timerInterval);
+  state.roundActive = false;
+  document.getElementById('problemBanner').style.display = 'none';
+
+  if (!success) {
+    state.health = Math.max(0, state.health - 10);
+    logAction('⏰ Time ran out! Garden suffers…', true);
+    witherPlant();
+  }
+
+  state.round++;
+  updateTVHUD();
+  syncState();
+
+  if (state.round > 5 || state.health <= 0) {
+    setTimeout(endGame, 1500);
+  } else {
+    document.getElementById('tvRound2').textContent = state.round;
+    document.getElementById('tvRoundBtn').innerHTML =
+      `<button class="btn-tv" onclick="startRound()" style="font-size:.9rem;padding:10px 20px;">▶ Round ${state.round}</button>`;
+  }
+}
+
+function endGame() {
+  clearInterval(state.timerInterval);
+  document.getElementById('tv-screen').style.display = 'none';
+  const e = document.getElementById('end-screen');
+  e.style.display = 'flex';
+  const won = state.health >= 50;
+  document.getElementById('endIcon').textContent = won ? '🌻' : '🥀';
+  document.getElementById('endTitle').textContent = won ? 'Garden Thrives!' : 'Garden Lost…';
+  document.getElementById('endSubtitle').textContent = won
+    ? 'Excellent teamwork — your garden is flourishing!'
+    : 'The garden couldn\'t survive. Try again with better communication!';
+  document.getElementById('finalScore').textContent = state.score;
+  document.getElementById('finalHealth').textContent = Math.round(state.health);
+  document.getElementById('finalRounds').textContent = Math.min(state.round - 1, 5);
+}
+
+// ═══════════════════════════════════════════════
+//  PHONE LAUNCH
+// ═══════════════════════════════════════════════
+function launchPhone() {
+  if (!selectedRole) { showToast('Please select a role first!'); return; }
+  document.getElementById('lobby').style.display = 'none';
+  const ps = document.getElementById('phone-screen');
+  ps.style.display = 'block';
+  state.mode = 'phone';
+  state.role = selectedRole;
+
+  const role = ROLES[selectedRole];
+  ps.className = role.theme;
+  document.getElementById('phoneIcon').textContent = role.icon;
+  document.getElementById('phoneName').textContent = role.name;
+
+  // Render action buttons
+  const actDiv = document.getElementById('phoneActions');
+  actDiv.innerHTML = '';
+  ACTIONS[selectedRole].forEach(a => {
+    const btn = document.createElement('button');
+    btn.className = 'action-btn';
+    btn.id = 'btn-' + a.id;
+    btn.innerHTML = `<span class="btn-icon">${a.icon}</span>
+      <span class="btn-text"><span class="btn-title">${a.title}</span><span class="btn-sub">${a.sub}</span></span>`;
+    btn.onclick = () => doAction(a);
+    actDiv.appendChild(btn);
+  });
+
+  // Poll for clues
+  setInterval(pollClues, 1500);
+}
+
+function pollClues() {
+  loadState();
+  document.getElementById('pRound').textContent = state.round || 1;
+  document.getElementById('pScore').textContent = state.score || 0;
+
+  const prob = state.currentProblem;
+  const clueEl = document.getElementById('phoneClue');
+
+  if (!state.roundActive) {
+    clueEl.textContent = state.round > 5
+      ? '🌻 Game Over! Check the TV for results.'
+      : '⏳ Waiting for next round… Talk to your team!';
+  } else if (prob && prob.clues) {
+    clueEl.textContent = prob.clues[state.role] || 'No clue for your role.';
+  }
+
+  if (state.timerSec >= 0) {
+    const m = Math.floor(state.timerSec / 60);
+    const s = state.timerSec % 60;
+    const el = document.getElementById('pTimer');
+    if (el) el.textContent = m + ':' + String(s).padStart(2,'0');
+  }
+}
+
+function doAction(action) {
+  loadState();
+  if (!state.roundActive) { showToast('⏸ Round not active yet!'); return; }
+  if (state.cooldowns[action.id]) { showToast('⏳ Action on cooldown!'); return; }
+
+  // Record action
+  const entry = { effect: action.effect, label: ROLES[state.role].icon + ' ' + action.title, _rendered: false };
+  state.actionsThisRound = state.actionsThisRound || [];
+  state.actionsThisRound.push(entry);
+  syncState();
+
+  showToast(action.icon + ' ' + action.title + ' used!');
+
+  // Cooldown 8s
+  state.cooldowns[action.id] = true;
+  const btn = document.getElementById('btn-' + action.id);
+  if (btn) {
+    btn.classList.add('cooldown');
+    let cd = 8;
+    const interval = setInterval(() => {
+      cd--;
+      if (btn) btn.querySelector('.btn-sub').textContent = `Cooldown: ${cd}s`;
+      if (cd <= 0) {
+        clearInterval(interval);
+        delete state.cooldowns[action.id];
+        btn.classList.remove('cooldown');
+        btn.querySelector('.btn-sub').textContent = action.sub;
+      }
+    }, 1000);
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════════
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+</script>
+</body>
+</html>
