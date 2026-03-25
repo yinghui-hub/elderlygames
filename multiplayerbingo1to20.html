@@ -1,0 +1,557 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0f0e17;--surface:#1a1828;--card:#22203a;--accent:#f5a623;--accent2:#e05c7a;
+    --green:#2dd4a0;--text:#f4f0ff;--muted:#8880aa;--border:#3a3760;
+    --num-size:52px;
+  }
+  body{background:var(--bg);color:var(--text);font-family:'Nunito',sans-serif;min-height:100vh}
+  #app{max-width:720px;margin:0 auto;padding:16px}
+  .screen{display:none}.screen.active{display:block}
+
+  /* LOGO */
+  .logo{text-align:center;margin:8px 0 24px}
+  .logo h1{font-family:'Fredoka One',cursive;font-size:48px;
+    background:linear-gradient(135deg,#f5a623,#e05c7a);-webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;letter-spacing:2px}
+  .logo p{color:var(--muted);font-size:14px;margin-top:4px}
+
+  /* BUTTONS */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    border:none;cursor:pointer;font-family:'Nunito',sans-serif;font-weight:700;
+    border-radius:12px;transition:transform .1s,opacity .15s;font-size:15px;padding:12px 24px}
+  .btn:active{transform:scale(.97)}
+  .btn-primary{background:linear-gradient(135deg,#f5a623,#e05c7a);color:#fff;width:100%}
+  .btn-secondary{background:var(--card);color:var(--text);border:1.5px solid var(--border);width:100%}
+  .btn-sm{padding:8px 16px;font-size:13px;width:auto}
+  .btn-green{background:var(--green);color:#0f0e17}
+  .btn-danger{background:#e05c7a;color:#fff}
+
+  /* INPUTS */
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-weight:600}
+  .field input{width:100%;background:var(--card);border:1.5px solid var(--border);
+    border-radius:10px;padding:10px 14px;color:var(--text);font-size:15px;font-family:'Nunito',sans-serif}
+  .field input:focus{outline:none;border-color:var(--accent)}
+
+  /* CARD SURFACE */
+  .surface{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:20px;margin-bottom:16px}
+
+  /* HOME */
+  .home-btns{display:flex;flex-direction:column;gap:12px}
+
+  /* QR SECTION */
+  #qr-wrapper{display:flex;flex-direction:column;align-items:center;gap:12px;margin:16px 0}
+  #qr-canvas{border-radius:12px;background:#fff;padding:10px}
+  .room-code{font-family:'Fredoka One',cursive;font-size:36px;color:var(--accent);
+    letter-spacing:6px;text-align:center;margin:8px 0}
+  .room-hint{font-size:13px;color:var(--muted);text-align:center}
+
+  /* PLAYER LIST */
+  #player-list{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+  .player-chip{background:var(--card);border:1.5px solid var(--border);
+    border-radius:20px;padding:6px 14px;font-size:13px;font-weight:600}
+  .player-chip.ready{border-color:var(--green);color:var(--green)}
+
+  /* CALLED NUMBERS TRACK */
+  #called-track{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+  .called-ball{width:38px;height:38px;border-radius:50%;
+    background:linear-gradient(135deg,#f5a623,#e05c7a);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Fredoka One',cursive;font-size:16px;color:#fff;
+    animation:popIn .25s ease}
+  @keyframes popIn{from{transform:scale(0)}to{transform:scale(1)}}
+
+  /* BINGO CARD GRID */
+  #bingo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:16px 0}
+  .bingo-cell{height:var(--num-size);border-radius:10px;
+    background:var(--card);border:2px solid var(--border);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Fredoka One',cursive;font-size:22px;
+    cursor:pointer;transition:all .2s;user-select:none}
+  .bingo-cell.marked{background:linear-gradient(135deg,#f5a623,#e05c7a);
+    border-color:transparent;color:#fff;transform:scale(1.05)}
+  .bingo-cell.called{border-color:var(--accent)}
+
+  /* CURRENT NUMBER */
+  #current-ball{width:80px;height:80px;border-radius:50%;
+    background:linear-gradient(135deg,#f5a623,#e05c7a);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Fredoka One',cursive;font-size:36px;color:#fff;
+    margin:0 auto 8px;box-shadow:0 0 24px #f5a62355;
+    animation:pulse 1s ease 1}
+  @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
+
+  /* STATUS BAR */
+  .status{text-align:center;font-size:13px;color:var(--muted);margin:8px 0}
+
+  /* WIN OVERLAY */
+  #win-overlay{display:none;position:fixed;inset:0;background:#0f0e17ee;
+    z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+  #win-overlay.show{display:flex}
+  .win-box{background:var(--surface);border:2px solid var(--accent);border-radius:20px;
+    padding:32px 40px;text-align:center;max-width:340px}
+  .win-emoji{font-size:64px;margin-bottom:8px}
+  .win-title{font-family:'Fredoka One',cursive;font-size:36px;color:var(--accent);margin-bottom:4px}
+
+  /* TABS */
+  .tabs{display:flex;gap:8px;margin-bottom:16px}
+  .tab{flex:1;padding:10px;border-radius:10px;text-align:center;
+    background:var(--card);border:1.5px solid var(--border);
+    cursor:pointer;font-weight:700;font-size:14px;transition:.15s}
+  .tab.active{background:var(--accent);border-color:var(--accent);color:#0f0e17}
+
+  .section-title{font-size:13px;color:var(--muted);font-weight:700;
+    text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+
+  #call-controls{display:flex;gap:10px;align-items:center;margin:12px 0}
+  #call-controls .btn{flex:1}
+
+  .winner-badge{display:inline-block;background:var(--green);color:#0f0e17;
+    font-size:12px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:6px}
+</style>
+
+<div id="app">
+  <!-- HOME -->
+  <div id="screen-home" class="screen active">
+    <div class="logo">
+      <h1>BINGO 20</h1>
+      <p>Numbers 1 – 20 · Multiplayer</p>
+    </div>
+    <div class="home-btns">
+      <button class="btn btn-primary" onclick="showCreate()">🎲 Host a Game</button>
+      <button class="btn btn-secondary" onclick="showJoin()">🎟 Join with Code</button>
+    </div>
+  </div>
+
+  <!-- CREATE ROOM -->
+  <div id="screen-create" class="screen">
+    <div class="logo"><h1>BINGO 20</h1></div>
+    <div class="surface">
+      <div class="field">
+        <label>Your name</label>
+        <input id="host-name" placeholder="Enter your name" maxlength="16"/>
+      </div>
+      <button class="btn btn-primary" onclick="createRoom()">Create Room</button>
+    </div>
+    <button class="btn btn-secondary" onclick="goHome()">← Back</button>
+  </div>
+
+  <!-- JOIN ROOM -->
+  <div id="screen-join" class="screen">
+    <div class="logo"><h1>BINGO 20</h1></div>
+    <div class="surface">
+      <div class="field">
+        <label>Your name</label>
+        <input id="join-name" placeholder="Enter your name" maxlength="16"/>
+      </div>
+      <div class="field">
+        <label>Room code</label>
+        <input id="join-code" placeholder="e.g. A3F7" maxlength="4" style="text-transform:uppercase;letter-spacing:4px;font-family:'Fredoka One',cursive;font-size:22px"/>
+      </div>
+      <button class="btn btn-primary" onclick="joinRoom()">Join Game</button>
+    </div>
+    <button class="btn btn-secondary" onclick="goHome()">← Back</button>
+  </div>
+
+  <!-- LOBBY (HOST) -->
+  <div id="screen-lobby" class="screen">
+    <div class="logo"><h1>BINGO 20</h1></div>
+    <div class="surface">
+      <div class="section-title">Room Code</div>
+      <div class="room-code" id="lobby-code">----</div>
+      <div id="qr-wrapper">
+        <canvas id="qr-canvas" width="180" height="180"></canvas>
+      </div>
+      <div class="room-hint">Players scan QR code or enter the code above</div>
+    </div>
+    <div class="surface">
+      <div class="section-title">Players (<span id="player-count">1</span>)</div>
+      <div id="player-list"></div>
+    </div>
+    <button class="btn btn-green" id="start-btn" onclick="startGame()">Start Game →</button>
+    <div style="height:10px"></div>
+    <button class="btn btn-secondary" onclick="goHome()">← Leave</button>
+  </div>
+
+  <!-- WAITING (PLAYER) -->
+  <div id="screen-waiting" class="screen">
+    <div class="logo"><h1>BINGO 20</h1></div>
+    <div class="surface" style="text-align:center">
+      <div class="section-title">Waiting for host to start...</div>
+      <div class="room-code" id="wait-code">----</div>
+      <div id="wait-player-list"></div>
+    </div>
+    <div class="status" id="wait-status">You joined! Hang tight 🎉</div>
+    <button class="btn btn-secondary" onclick="leaveGame()">← Leave</button>
+  </div>
+
+  <!-- GAME (HOST CALLER) -->
+  <div id="screen-game-host" class="screen">
+    <div class="logo" style="margin-bottom:8px"><h1>BINGO 20</h1><p id="host-game-status">Calling numbers...</p></div>
+    <div class="surface" style="text-align:center">
+      <div class="section-title">Current Number</div>
+      <div id="current-ball">–</div>
+      <div id="call-controls">
+        <button class="btn btn-primary" id="call-btn" onclick="callNumber()">📢 Call Next</button>
+        <button class="btn btn-danger btn-sm" onclick="endGame()">End</button>
+      </div>
+    </div>
+    <div class="surface">
+      <div class="section-title">Called (<span id="called-count">0</span>/20)</div>
+      <div id="called-track"></div>
+    </div>
+    <div class="surface">
+      <div class="section-title">Players</div>
+      <div id="host-player-list"></div>
+    </div>
+  </div>
+
+  <!-- GAME (PLAYER CARD) -->
+  <div id="screen-game-player" class="screen">
+    <div class="logo" style="margin-bottom:8px"><h1>BINGO 20</h1></div>
+    <div class="surface" style="text-align:center">
+      <div class="section-title">Last Called</div>
+      <div id="player-current-ball">–</div>
+      <div class="status" id="player-status">Waiting for host...</div>
+    </div>
+    <div class="surface">
+      <div class="section-title">Your Card — tap to mark</div>
+      <div id="bingo-grid"></div>
+      <button class="btn btn-green" id="bingo-btn" onclick="claimBingo()" style="display:none;margin-top:12px">🎉 BINGO!</button>
+    </div>
+    <div class="surface">
+      <div class="section-title">Called Numbers</div>
+      <div id="player-called-track"></div>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="leaveGame()" style="margin-top:8px">← Leave</button>
+  </div>
+
+</div>
+
+<!-- WIN OVERLAY -->
+<div id="win-overlay">
+  <div class="win-box">
+    <div class="win-emoji">🎊</div>
+    <div class="win-title">BINGO!</div>
+    <div id="win-msg" style="color:var(--muted);margin:8px 0 16px"></div>
+    <button class="btn btn-primary" onclick="dismissWin()">Play Again</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+/* ============================================================
+   BINGO 20 — Multiplayer via window.storage (shared=true)
+   Room key schema:
+     room:{code}        -> { host, players:[{id,name,winner}], started, calledNumbers, lastCalled }
+     card:{code}:{pid}  -> [array of 16 numbers]
+   ============================================================ */
+
+const STORAGE_TICK = 1800; // ms poll interval
+let myId = 'p' + Math.random().toString(36).slice(2,8);
+let myName = '';
+let roomCode = '';
+let isHost = false;
+let myCard = [];
+let markedCells = new Set();
+let pollTimer = null;
+let lastCalledLen = 0;
+let gameEnded = false;
+
+// ---- helpers ----
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function goHome(){ clearPoll(); show('screen-home'); }
+
+function randCode(){
+  return Math.random().toString(36).slice(2,6).toUpperCase();
+}
+
+function genCard(){
+  let nums = Array.from({length:20},(_,i)=>i+1);
+  for(let i=nums.length-1;i>0;i--){
+    let j=Math.floor(Math.random()*(i+1));[nums[i],nums[j]]=[nums[j],nums[i]];
+  }
+  return nums.slice(0,16);
+}
+
+function showCreate(){ show('screen-create'); }
+function showJoin(){ show('screen-join'); }
+
+// ---- storage wrappers ----
+async function saveRoom(data){
+  try{ await window.storage.set('room:'+roomCode, JSON.stringify(data), true); }catch(e){}
+}
+async function loadRoom(){
+  try{
+    let r = await window.storage.get('room:'+roomCode, true);
+    return r ? JSON.parse(r.value) : null;
+  }catch(e){return null;}
+}
+async function saveCard(pid, card){
+  try{ await window.storage.set('card:'+roomCode+':'+pid, JSON.stringify(card), true); }catch(e){}
+}
+async function loadCard(pid){
+  try{
+    let r = await window.storage.get('card:'+roomCode+':'+pid, true);
+    return r ? JSON.parse(r.value) : null;
+  }catch(e){return null;}
+}
+
+// ---- QR Code ----
+function drawQR(url){
+  const canvas = document.getElementById('qr-canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,180,180);
+  // Use QRCode library
+  try{
+    const qr = new QRCode(document.createElement('div'),{text:url,width:180,height:180,colorDark:'#0f0e17',colorLight:'#ffffff'});
+    setTimeout(()=>{
+      const img = qr._el.querySelector('img');
+      if(img){ const i=new Image();i.onload=()=>ctx.drawImage(i,0,0,180,180);i.src=img.src; }
+    },100);
+  }catch(e){
+    // fallback: just show text
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,180,180);
+    ctx.fillStyle='#0f0e17';ctx.font='14px Nunito';ctx.textAlign='center';
+    ctx.fillText('Scan unavailable',90,85);ctx.fillText('Use room code',90,105);
+  }
+}
+
+// ---- CREATE ROOM ----
+async function createRoom(){
+  const n = document.getElementById('host-name').value.trim();
+  if(!n){alert('Enter your name');return;}
+  myName = n; isHost = true;
+  roomCode = randCode();
+  const room = {
+    host: myId,
+    players:[{id:myId, name:myName, winner:false}],
+    started: false,
+    calledNumbers:[],
+    lastCalled: null
+  };
+  await saveRoom(room);
+  myCard = genCard();
+  await saveCard(myId, myCard);
+  renderLobby(room);
+  show('screen-lobby');
+  document.getElementById('lobby-code').textContent = roomCode;
+  // QR points to same page URL with ?join=CODE
+  const joinUrl = location.href.split('?')[0]+'?join='+roomCode;
+  drawQR(joinUrl);
+  startPoll(pollLobbyHost);
+}
+
+// ---- JOIN ROOM ----
+async function joinRoom(){
+  const n = document.getElementById('join-name').value.trim();
+  const c = document.getElementById('join-code').value.trim().toUpperCase();
+  if(!n){alert('Enter your name');return;}
+  if(c.length!==4){alert('Enter a 4-character room code');return;}
+  myName=n; isHost=false; roomCode=c;
+  let room = await loadRoom();
+  if(!room){alert('Room not found. Check the code and try again.');return;}
+  if(room.started){alert('Game already started!');return;}
+  // add me
+  if(!room.players.find(p=>p.id===myId)){
+    room.players.push({id:myId,name:myName,winner:false});
+    await saveRoom(room);
+  }
+  myCard = genCard();
+  await saveCard(myId, myCard);
+  renderWaiting(room);
+  show('screen-waiting');
+  document.getElementById('wait-code').textContent=roomCode;
+  startPoll(pollWaitingPlayer);
+}
+
+// ---- LOBBY RENDERING ----
+function renderLobby(room){
+  const list = document.getElementById('player-list');
+  document.getElementById('player-count').textContent = room.players.length;
+  list.innerHTML = room.players.map(p=>
+    `<div class="player-chip ready">${p.name}${p.id===myId?' (you)':''}</div>`
+  ).join('');
+}
+
+function renderWaiting(room){
+  const list = document.getElementById('wait-player-list');
+  list.innerHTML = room.players.map(p=>
+    `<div class="player-chip">${p.name}${p.id===myId?' (you)':''}</div>`
+  ).join('');
+}
+
+// ---- START GAME ----
+async function startGame(){
+  let room = await loadRoom();
+  if(!room)return;
+  if(room.players.length<1){alert('Need at least 1 player');return;}
+  room.started=true;
+  await saveRoom(room);
+  clearPoll();
+  renderGameHost(room);
+  show('screen-game-host');
+  startPoll(pollGameHost);
+}
+
+// ---- CALL NUMBER ----
+async function callNumber(){
+  let room = await loadRoom();
+  if(!room)return;
+  const remaining = [];
+  for(let i=1;i<=20;i++) if(!room.calledNumbers.includes(i)) remaining.push(i);
+  if(remaining.length===0){
+    document.getElementById('call-btn').disabled=true;
+    document.getElementById('host-game-status').textContent='All numbers called!';
+    return;
+  }
+  const n = remaining[Math.floor(Math.random()*remaining.length)];
+  room.calledNumbers.push(n);
+  room.lastCalled=n;
+  await saveRoom(room);
+  renderGameHost(room);
+}
+
+function renderGameHost(room){
+  document.getElementById('current-ball').textContent = room.lastCalled||'–';
+  document.getElementById('called-count').textContent = room.calledNumbers.length;
+  const track = document.getElementById('called-track');
+  track.innerHTML = room.calledNumbers.map(n=>`<div class="called-ball">${n}</div>`).join('');
+  const pl = document.getElementById('host-player-list');
+  pl.innerHTML = room.players.map(p=>
+    `<div class="player-chip${p.winner?' ready':''}">${p.name}${p.winner?'<span class="winner-badge">BINGO</span>':''}</div>`
+  ).join('');
+  if(room.calledNumbers.length===20){
+    document.getElementById('call-btn').disabled=true;
+  }
+}
+
+// ---- PLAYER CARD ----
+function renderPlayerCard(){
+  const grid = document.getElementById('bingo-grid');
+  grid.innerHTML = myCard.map((n,i)=>
+    `<div class="bingo-cell${markedCells.has(i)?' marked':''}" onclick="markCell(${i})">${n}</div>`
+  ).join('');
+}
+
+function markCell(i){
+  if(markedCells.has(i)) markedCells.delete(i);
+  else markedCells.add(i);
+  renderPlayerCard();
+  checkBingo();
+}
+
+function checkBingo(){
+  // 4x4 grid — check rows, cols, diags
+  const lines=[
+    [0,1,2,3],[4,5,6,7],[8,9,10,11],[12,13,14,15],
+    [0,4,8,12],[1,5,9,13],[2,6,10,14],[3,7,11,15],
+    [0,5,10,15],[3,6,9,12]
+  ];
+  const win = lines.some(l=>l.every(i=>markedCells.has(i)));
+  document.getElementById('bingo-btn').style.display = win?'block':'none';
+}
+
+async function claimBingo(){
+  let room = await loadRoom();
+  if(!room)return;
+  const me = room.players.find(p=>p.id===myId);
+  if(me) me.winner=true;
+  await saveRoom(room);
+  showWin(myName);
+}
+
+function showWin(name){
+  document.getElementById('win-msg').textContent = name + ' got BINGO! 🎊';
+  document.getElementById('win-overlay').classList.add('show');
+}
+function dismissWin(){ document.getElementById('win-overlay').classList.remove('show'); goHome(); }
+
+async function endGame(){
+  let room = await loadRoom();
+  if(room){room.ended=true;await saveRoom(room);}
+  clearPoll();goHome();
+}
+async function leaveGame(){clearPoll();goHome();}
+
+// ---- POLLING ----
+function startPoll(fn){
+  clearPoll();
+  pollTimer = setInterval(fn, STORAGE_TICK);
+}
+function clearPoll(){if(pollTimer){clearInterval(pollTimer);pollTimer=null;}}
+
+async function pollLobbyHost(){
+  let room = await loadRoom();
+  if(!room)return;
+  renderLobby(room);
+}
+
+async function pollWaitingPlayer(){
+  let room = await loadRoom();
+  if(!room)return;
+  renderWaiting(room);
+  if(room.started){
+    clearPoll();
+    // build player game screen
+    renderPlayerCard();
+    show('screen-game-player');
+    document.getElementById('player-status').textContent='Game started — mark called numbers!';
+    startPoll(pollGamePlayer);
+  }
+}
+
+async function pollGameHost(){
+  let room = await loadRoom();
+  if(!room)return;
+  renderGameHost(room);
+  const winner = room.players.find(p=>p.winner);
+  if(winner && !gameEnded){
+    gameEnded=true;
+    showWin(winner.name);
+  }
+}
+
+async function pollGamePlayer(){
+  let room = await loadRoom();
+  if(!room)return;
+  const called = room.calledNumbers||[];
+  // highlight newly called
+  myCard.forEach((n,i)=>{
+    const cell = document.querySelector(`#bingo-grid .bingo-cell:nth-child(${i+1})`);
+    if(cell){ if(called.includes(n)) cell.classList.add('called'); else cell.classList.remove('called'); }
+  });
+  // update last called ball
+  const ball = document.getElementById('player-current-ball');
+  if(room.lastCalled) ball.textContent = room.lastCalled;
+
+  // called track
+  const track = document.getElementById('player-called-track');
+  track.innerHTML = called.map(n=>`<div class="called-ball">${n}</div>`).join('');
+
+  const winner = room.players.find(p=>p.winner);
+  if(winner && winner.id!==myId && !gameEnded){
+    gameEnded=true;
+    showWin(winner.name);
+  }
+
+  document.getElementById('player-status').textContent=
+    room.lastCalled ? `Last called: ${room.lastCalled}` : 'Waiting for first number...';
+}
+
+// ---- AUTO JOIN FROM URL ----
+(function checkUrl(){
+  const params = new URLSearchParams(location.search);
+  const code = params.get('join');
+  if(code){
+    document.getElementById('join-code').value=code.toUpperCase();
+    show('screen-join');
+  }
+})();
+</script>
