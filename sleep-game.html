@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drift Off — Endless Sleep</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;1,400;1,700&family=Crimson+Pro:ital,wght@0,300;1,300&display=swap');
+:root {
+  --midnight:#0a0a18; --indigo:#1a1a4e; --violet:#2d1b69;
+  --lavender:#7c6bb5; --soft-purple:#b8a9d9; --moonlight:#e8e0f5;
+  --gold:#f0c060; --memory:#a8d8ea;
+  --noise-green:#4ade80; --noise-yellow:#facc15; --noise-orange:#fb923c; --noise-red:#f87171;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--midnight);color:var(--moonlight);font-family:'Crimson Pro',Georgia,serif;min-height:100vh;overflow:hidden;cursor:default;user-select:none;}
+
+canvas#starfield{position:fixed;inset:0;pointer-events:none;z-index:0;}
+.moon{position:fixed;top:8vh;right:12vw;width:80px;height:80px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff9e6,#f0c060 60%,#d4a830);box-shadow:0 0 30px 10px rgba(240,192,96,.3),0 0 80px 30px rgba(240,192,96,.1);animation:moonFloat 8s ease-in-out infinite;z-index:1;}
+@keyframes moonFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+.cloud{position:fixed;border-radius:50px;background:rgba(124,107,181,.12);backdrop-filter:blur(2px);z-index:1;animation:cloudDrift var(--cd) ease-in-out infinite;}
+@keyframes cloudDrift{0%,100%{transform:translateX(0);opacity:.3}50%{transform:translateX(var(--drift));opacity:.6}}
+
+#game{position:relative;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:14px;}
+.screen{display:none;flex-direction:column;align-items:center;text-align:center;animation:fadeIn 1.2s ease forwards;width:100%;max-width:500px;}
+.screen.active{display:flex;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── TYPE ── */
+.game-title{font-family:'Playfair Display',serif;font-style:italic;font-weight:700;font-size:clamp(2.8rem,7vw,5.5rem);letter-spacing:-.02em;line-height:1;margin-bottom:.2em;background:linear-gradient(135deg,var(--moonlight) 0%,var(--gold) 50%,var(--soft-purple) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:titleGlow 4s ease-in-out infinite;}
+@keyframes titleGlow{0%,100%{filter:drop-shadow(0 0 20px rgba(240,192,96,.3))}50%{filter:drop-shadow(0 0 40px rgba(240,192,96,.6))}}
+.subtitle{font-size:clamp(.85rem,2vw,1.1rem);font-style:italic;color:var(--lavender);letter-spacing:.15em;margin-bottom:2rem;}
+.section-label{font-size:.68rem;letter-spacing:.3em;text-transform:uppercase;color:var(--lavender);margin-bottom:.35rem;}
+.mission-text{font-family:'Playfair Display',serif;font-size:clamp(1rem,3vw,1.6rem);font-style:italic;color:var(--moonlight);margin-bottom:.3rem;line-height:1.3;max-width:420px;}
+.mission-sub{font-size:.84rem;color:var(--lavender);margin-bottom:1rem;font-style:italic;}
+
+/* ── BED ── */
+.bed-scene{position:relative;margin:.8rem 0 1.8rem;}
+.bed-emoji{font-size:clamp(3.5rem,10vw,6rem);display:block;animation:bedBounce 3s ease-in-out infinite;filter:drop-shadow(0 10px 28px rgba(124,107,181,.4));}
+@keyframes bedBounce{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-8px) rotate(1deg)}}
+.zzz{position:absolute;font-family:'Playfair Display',serif;font-style:italic;color:var(--soft-purple);animation:floatUp 3s ease-out infinite;pointer-events:none;}
+.zzz:nth-child(2){font-size:1rem;top:0;right:-10px;animation-delay:0s;opacity:0}
+.zzz:nth-child(3){font-size:1.4rem;top:-20px;right:-25px;animation-delay:1s;opacity:0}
+.zzz:nth-child(4){font-size:1.8rem;top:-45px;right:-15px;animation-delay:2s;opacity:0}
+@keyframes floatUp{0%{opacity:0;transform:translateY(0) scale(.8)}20%{opacity:.9}100%{opacity:0;transform:translateY(-60px) scale(1.1)}}
+
+/* ── BTN ── */
+.btn{background:rgba(124,107,181,.15);border:1.5px solid rgba(124,107,181,.5);color:var(--moonlight);font-family:'Crimson Pro',serif;font-size:1rem;font-style:italic;letter-spacing:.05em;padding:.68em 1.9em;border-radius:50px;cursor:pointer;transition:all .32s ease;backdrop-filter:blur(4px);position:relative;overflow:hidden;}
+.btn::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,rgba(240,192,96,.15),transparent 70%);opacity:0;transition:opacity .32s;}
+.btn:hover{border-color:var(--gold);color:var(--gold);box-shadow:0 0 28px rgba(240,192,96,.2);transform:translateY(-2px);}
+.btn:hover::before{opacity:1;}.btn:active{transform:translateY(0);}
+
+/* ── HUD ── */
+.hud-row{display:flex;gap:1rem;align-items:center;margin-bottom:.3rem;justify-content:center;flex-wrap:wrap;}
+.hud-item{display:flex;flex-direction:column;align-items:center;}
+.hud-val{font-family:'Playfair Display',serif;font-size:1.25rem;font-style:italic;color:var(--gold);}
+.hud-val.mem{color:var(--memory);}
+.hud-lbl{font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;color:var(--lavender);}
+.night-track{width:min(270px,80vw);height:4px;background:rgba(124,107,181,.2);border-radius:2px;margin:.3rem 0;overflow:hidden;}
+.night-fill{height:100%;background:linear-gradient(to right,var(--violet),var(--gold));border-radius:2px;transition:width .5s ease;}
+
+/* ── RELIC TRAY ── */
+.relic-tray{display:flex;gap:.35rem;flex-wrap:wrap;justify-content:center;margin:.2rem 0;min-height:24px;}
+.relic-chip{display:inline-flex;align-items:center;gap:.22em;background:rgba(124,107,181,.1);border-radius:20px;padding:.12em .5em;font-size:.7rem;cursor:help;position:relative;border:1px solid rgba(124,107,181,.22);}
+.relic-chip.rare{border-color:rgba(96,192,240,.38);color:#a8d8f0;}
+.relic-chip.legendary{border-color:rgba(240,192,96,.42);color:var(--gold);}
+.relic-chip.cursed{border-color:rgba(248,113,113,.45);color:#fca5a5;}
+.relic-chip .tip{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:rgba(10,10,24,.97);border:1px solid rgba(124,107,181,.4);border-radius:8px;padding:.32em .6em;font-size:.66rem;white-space:nowrap;color:var(--soft-purple);z-index:300;pointer-events:none;max-width:220px;white-space:normal;text-align:center;}
+.relic-chip:hover .tip{display:block;}
+
+/* ── RING ── */
+.sleep-container{position:relative;margin:.7rem 0;}
+.sleep-ring{width:clamp(140px,34vw,185px);height:clamp(140px,34vw,185px);border-radius:50%;position:relative;display:flex;align-items:center;justify-content:center;}
+.ring-svg{position:absolute;inset:0;transform:rotate(-90deg);width:100%;height:100%;}
+.ring-bg{fill:none;stroke:rgba(124,107,181,.18);stroke-width:8;}
+.ring-fill{fill:none;stroke:url(#ringGrad);stroke-width:8;stroke-linecap:round;stroke-dasharray:628;stroke-dashoffset:628;}
+.ring-inner{z-index:2;display:flex;flex-direction:column;align-items:center;}
+.sleep-emoji{font-size:clamp(1.9rem,5.5vw,3rem);display:block;}
+.sleep-pct{font-family:'Playfair Display',serif;font-size:.9rem;font-style:italic;color:var(--soft-purple);margin-top:.08em;}
+
+/* ── ACTION ZONE ── */
+.action-zone{margin:.6rem 0 .8rem;min-height:80px;display:flex;flex-direction:column;align-items:center;gap:.55rem;}
+.action-prompt{font-size:clamp(.76rem,2.2vw,.9rem);color:var(--lavender);font-style:italic;text-align:center;max-width:300px;line-height:1.5;}
+
+/* ── HOLD ── */
+.hold-btn{width:clamp(85px,24vw,118px);height:clamp(85px,24vw,118px);border-radius:50%;background:radial-gradient(circle at 40% 40%,rgba(124,107,181,.3),rgba(45,27,105,.4));border:2px solid rgba(124,107,181,.4);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.9rem;transition:all .2s ease;position:relative;overflow:hidden;-webkit-tap-highlight-color:transparent;touch-action:none;}
+.hold-btn:active,.hold-btn.pressing{background:radial-gradient(circle at 40% 40%,rgba(124,107,181,.5),rgba(45,27,105,.6));border-color:var(--soft-purple);transform:scale(.95);box-shadow:0 0 36px rgba(124,107,181,.5);}
+.hold-btn .btn-label{font-family:'Crimson Pro',serif;font-size:.56rem;letter-spacing:.14em;text-transform:uppercase;color:var(--lavender);margin-top:.18em;}
+.hold-fill{position:absolute;bottom:0;left:0;right:0;height:0%;background:linear-gradient(to top,rgba(240,192,96,.28),rgba(124,107,181,.18));transition:height .1s linear;border-radius:0 0 50% 50%;}
+
+/* ── FLOATING DISTURBANCES (fullscreen) ── */
+.float-disturb{position:fixed;cursor:pointer;animation:popIn .3s ease forwards;z-index:40;line-height:1;transition:transform .1s;border-radius:50%;padding:6px;border:2px solid transparent;}
+.float-disturb:hover{transform:scale(1.25);}
+.float-disturb:active{transform:scale(.9);}
+@keyframes popIn{from{opacity:0;transform:scale(0) rotate(-25deg)}to{opacity:1;transform:scale(1) rotate(0)}}
+/* noise tier colours */
+.float-disturb.tier-normal{filter:drop-shadow(0 0 7px rgba(74,222,128,.7));border-color:rgba(74,222,128,.3);background:rgba(74,222,128,.08);}
+.float-disturb.tier-annoying{filter:drop-shadow(0 0 7px rgba(250,204,21,.8));border-color:rgba(250,204,21,.35);background:rgba(250,204,21,.08);}
+.float-disturb.tier-dangerous{filter:drop-shadow(0 0 9px rgba(251,146,60,.9));border-color:rgba(251,146,60,.4);background:rgba(251,146,60,.1);}
+.float-disturb.tier-nightmare{filter:drop-shadow(0 0 12px rgba(248,113,113,1));border-color:rgba(248,113,113,.5);background:rgba(248,113,113,.12);animation:popIn .3s ease forwards,nightmareShake .4s ease-in-out infinite;}
+@keyframes nightmareShake{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(-2px,1px) rotate(-2deg)}75%{transform:translate(2px,-1px) rotate(2deg)}}
+
+/* noise label */
+.noise-label{position:absolute;bottom:-16px;left:50%;transform:translateX(-50%);font-size:.55rem;letter-spacing:.08em;white-space:nowrap;font-style:italic;pointer-events:none;}
+.tier-normal .noise-label{color:var(--noise-green);}
+.tier-annoying .noise-label{color:var(--noise-yellow);}
+.tier-dangerous .noise-label{color:var(--noise-orange);}
+.tier-nightmare .noise-label{color:var(--noise-red);}
+
+/* ── DEEP SLEEP ENEMY ── */
+.sleep-enemy{position:fixed;font-size:1.6rem;cursor:pointer;z-index:42;animation:enemyFloat var(--ef) ease-in-out infinite;filter:drop-shadow(0 0 10px rgba(248,113,113,.8));}
+@keyframes enemyFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(var(--ex),var(--ey))}}
+.sleep-enemy.vibrating{animation:enemyFloat var(--ef) ease-in-out infinite, enemyVibe .15s linear infinite;}
+@keyframes enemyVibe{0%{transform:translate(-3px,-2px)}25%{transform:translate(3px,2px)}50%{transform:translate(-2px,3px)}75%{transform:translate(2px,-3px)}100%{transform:translate(-3px,-2px)}}
+
+/* ── WISP (dream) ── */
+.float-wisp{position:fixed;cursor:pointer;z-index:40;animation:wispFloat var(--wf) ease-in-out infinite, popIn .4s ease forwards;font-size:clamp(1.5rem,4vw,2.2rem);filter:drop-shadow(0 0 12px rgba(240,192,96,.7));transition:transform .1s;}
+.float-wisp:hover{transform:scale(1.3);}
+@keyframes wispFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+
+/* ── DREAM BADGES ── */
+.dream-collector{display:flex;flex-wrap:wrap;gap:.32rem;justify-content:center;margin:.3rem 0;min-height:26px;}
+.dream-badge{background:rgba(124,107,181,.17);border:1px solid rgba(124,107,181,.33);border-radius:20px;padding:.14em .62em;font-size:.7rem;color:var(--soft-purple);font-style:italic;animation:badgeIn .4s ease;}
+@keyframes badgeIn{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+
+/* ── OVERLAYS ── */
+.overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:rgba(10,10,24,.88);backdrop-filter:blur(10px);animation:fadeIn .4s ease;overflow-y:auto;padding:10px;}
+.overlay-box{background:linear-gradient(135deg,rgba(26,26,78,.97),rgba(45,27,105,.83));border:1px solid rgba(124,107,181,.4);border-radius:18px;padding:clamp(1rem,3.5vw,2rem);text-align:center;max-width:min(440px,95vw);width:100%;box-shadow:0 18px 70px rgba(0,0,0,.5);}
+.overlay-emoji{font-size:2.5rem;margin-bottom:.3rem;}
+.overlay-title{font-family:'Playfair Display',serif;font-size:clamp(1.15rem,3.2vw,1.65rem);font-style:italic;color:var(--moonlight);margin-bottom:.32rem;}
+.overlay-body{color:var(--lavender);font-size:.85rem;line-height:1.6;margin-bottom:.9rem;font-style:italic;}
+
+/* ── SHOP ── */
+.shop-memory{font-family:'Playfair Display',serif;font-size:1.45rem;font-style:italic;color:var(--memory);margin:.25rem 0 .7rem;}
+.shop-memory small{font-size:.78rem;color:var(--lavender);}
+.shop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.55rem;width:100%;margin-bottom:.8rem;}
+.shop-card{background:rgba(13,13,43,.78);border-radius:12px;padding:.7rem .4rem;border:1.5px solid rgba(124,107,181,.2);cursor:pointer;transition:all .28s ease;display:flex;flex-direction:column;align-items:center;gap:.28rem;position:relative;overflow:hidden;}
+.shop-card::after{content:'';position:absolute;inset:0;opacity:0;transition:opacity .28s;}
+.shop-card.common::after{background:radial-gradient(circle at 50% 0%,rgba(184,169,217,.1),transparent 70%);}
+.shop-card.rare{border-color:rgba(96,192,240,.32);}
+.shop-card.rare::after{background:radial-gradient(circle at 50% 0%,rgba(96,192,240,.12),transparent 70%);}
+.shop-card.legendary{border-color:rgba(240,192,96,.38);}
+.shop-card.legendary::after{background:radial-gradient(circle at 50% 0%,rgba(240,192,96,.14),transparent 70%);}
+.shop-card.cursed{border-color:rgba(248,113,113,.38);}
+.shop-card.cursed::after{background:radial-gradient(circle at 50% 0%,rgba(248,113,113,.12),transparent 70%);}
+.shop-card.buyable:hover{transform:translateY(-3px);box-shadow:0 7px 26px rgba(0,0,0,.4);}
+.shop-card.buyable:hover::after{opacity:1;}
+.shop-card.sold,.shop-card.cant-afford{opacity:.45;cursor:not-allowed;}
+.card-icon{font-size:1.65rem;}
+.card-name{font-family:'Playfair Display',serif;font-size:.7rem;font-style:italic;color:var(--moonlight);line-height:1.2;text-align:center;}
+.card-desc{font-size:.6rem;color:var(--lavender);font-style:italic;text-align:center;line-height:1.3;}
+.card-rarity{font-size:.56rem;letter-spacing:.09em;text-transform:uppercase;}
+.shop-card.common .card-rarity{color:var(--soft-purple);}
+.shop-card.rare .card-rarity{color:#a8d8f0;}
+.shop-card.legendary .card-rarity{color:var(--gold);}
+.shop-card.cursed .card-rarity{color:#fca5a5;}
+.card-cost{font-size:.66rem;color:var(--memory);background:rgba(168,216,234,.09);border:1px solid rgba(168,216,234,.22);border-radius:18px;padding:.12em .5em;}
+.card-bought{font-size:.62rem;color:var(--lavender);font-style:italic;}
+.card-curse{font-size:.58rem;color:#fca5a5;font-style:italic;text-align:center;line-height:1.2;}
+
+/* ── END ── */
+.star-rating{display:flex;gap:.45rem;justify-content:center;margin:.7rem 0;}
+.star-item{font-size:1.8rem;animation:starPop .5s ease forwards;opacity:0;transform:scale(0);}
+@keyframes starPop{to{opacity:1;transform:scale(1) rotate(10deg)}}
+
+/* ── FX ── */
+.noise-flash{position:fixed;inset:0;background:rgba(255,100,50,.1);pointer-events:none;z-index:50;opacity:0;animation:noiseFlash .3s ease;}
+@keyframes noiseFlash{0%{opacity:0}30%{opacity:1}100%{opacity:0}}
+.red-flash{position:fixed;inset:0;background:rgba(248,113,113,.15);pointer-events:none;z-index:50;opacity:0;animation:noiseFlash .5s ease;}
+.sand-particle{position:fixed;pointer-events:none;z-index:20;font-size:1rem;animation:particleFloat 2s ease-out forwards;}
+@keyframes particleFloat{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-75px) scale(.3)}}
+.mem-pop{position:fixed;pointer-events:none;z-index:60;font-family:'Playfair Display',serif;font-style:italic;color:var(--memory);font-size:1rem;animation:memUp 1.4s ease-out forwards;white-space:nowrap;}
+@keyframes memUp{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-52px)}}
+.score-pop{position:fixed;pointer-events:none;z-index:60;font-family:'Playfair Display',serif;font-style:italic;color:var(--gold);font-size:.9rem;animation:memUp 1.2s ease-out forwards;white-space:nowrap;}
+
+/* mouse cursor trail for deep sleep */
+.cursor-dot{position:fixed;pointer-events:none;z-index:55;width:6px;height:6px;border-radius:50%;background:rgba(248,113,113,.6);animation:dotFade .6s ease-out forwards;}
+@keyframes dotFade{0%{opacity:.8;transform:scale(1)}100%{opacity:0;transform:scale(0)}}
+
+@keyframes dreamPulse{0%,100%{opacity:.45}50%{opacity:1}}
+@media(max-height:650px){.bed-emoji{font-size:3rem}.game-title{font-size:2.5rem}.sleep-ring{width:125px;height:125px}}
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<div class="moon"></div>
+<div class="cloud" style="width:200px;height:40px;top:15%;left:-5%;--cd:12s;--drift:30px;"></div>
+<div class="cloud" style="width:150px;height:30px;top:35%;right:5%;--cd:18s;--drift:-20px;"></div>
+<div class="cloud" style="width:100px;height:25px;top:60%;left:10%;--cd:22s;--drift:15px;"></div>
+
+<div id="game">
+  <!-- TITLE -->
+  <div class="screen active" id="screen-title">
+    <div class="bed-scene">
+      <span class="bed-emoji">🛏️</span>
+      <span class="zzz">z</span><span class="zzz">z</span><span class="zzz">z</span>
+    </div>
+    <h1 class="game-title">Drift Off</h1>
+    <p class="subtitle">an endless roguelike sleeping game</p>
+    <button class="btn" onclick="startGame()">Close your eyes...</button>
+  </div>
+
+  <!-- GAME -->
+  <div class="screen" id="screen-game">
+    <div class="hud-row">
+      <div class="hud-item"><span class="hud-val" id="hud-score">0</span><span class="hud-lbl">Dreams</span></div>
+      <div class="hud-item"><span class="hud-val mem" id="hud-memory">0</span><span class="hud-lbl">💧 Memory</span></div>
+      <div class="hud-item"><span class="hud-val" id="hud-night">Night 1</span><span class="hud-lbl">endless</span></div>
+      <div class="hud-item"><span class="hud-val" id="hud-lives">❤️❤️❤️</span><span class="hud-lbl">Rest</span></div>
+    </div>
+    <div class="night-track"><div class="night-fill" id="night-fill" style="width:0%"></div></div>
+    <div class="relic-tray" id="relic-tray"></div>
+
+    <div class="section-label" id="phase-label">DRIFTING OFF</div>
+    <div class="mission-text" id="mission-text">Settle in...</div>
+    <div class="mission-sub" id="mission-sub">Find your comfort</div>
+
+    <div class="sleep-container">
+      <div class="sleep-ring">
+        <svg class="ring-svg" viewBox="0 0 220 220">
+          <defs>
+            <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#7c6bb5"/>
+              <stop offset="100%" stop-color="#f0c060"/>
+            </linearGradient>
+          </defs>
+          <circle class="ring-bg" cx="110" cy="110" r="100"/>
+          <circle class="ring-fill" id="ring-fill" cx="110" cy="110" r="100"/>
+        </svg>
+        <div class="ring-inner">
+          <span class="sleep-emoji" id="sleep-emoji">😐</span>
+          <span class="sleep-pct" id="sleep-pct">0%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-zone" id="action-zone"></div>
+    <div id="disturbance-area" style="display:none"></div>
+    <div class="dream-collector" id="dream-collector"></div>
+  </div>
+
+  <!-- END -->
+  <div class="screen" id="screen-end">
+    <div class="overlay-emoji" id="end-emoji">🌙</div>
+    <h2 class="game-title" style="font-size:clamp(1.8rem,5vw,3rem)" id="end-title">Morning...</h2>
+    <p style="font-style:italic;color:var(--lavender);margin:.3rem 0 .6rem;font-size:.86rem" id="end-sub"></p>
+    <div class="star-rating" id="star-rating"></div>
+    <div style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--gold);margin:.3rem 0" id="end-score"></div>
+    <p style="color:var(--memory);font-style:italic;font-size:.8rem;margin-bottom:.25rem" id="end-memory"></p>
+    <p style="color:var(--lavender);font-style:italic;font-size:.8rem;margin-bottom:.6rem" id="end-info"></p>
+    <div class="relic-tray" id="end-relics" style="margin-bottom:.7rem;justify-content:center"></div>
+    <div class="dream-collector" id="end-collector" style="margin-bottom:1rem"></div>
+    <button class="btn" onclick="startGame()">Sleep again</button>
+    <button class="btn" style="margin-top:.4rem;background:transparent;border-color:rgba(124,107,181,.18)" onclick="showTitle()">Go home</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// STARFIELD
+// ══════════════════════════════════════════════
+const canvas=document.getElementById('starfield'),ctx=canvas.getContext('2d');
+let stars=[];
+function resizeCanvas(){canvas.width=innerWidth;canvas.height=innerHeight;}
+function createStars(){stars=Array.from({length:200},()=>({x:Math.random()*canvas.width,y:Math.random()*canvas.height,r:Math.random()*1.5+.3,phase:Math.random()*Math.PI*2,speed:Math.random()*.015+.005,maxOp:Math.random()*.7+.3}));}
+function drawStars(t){ctx.clearRect(0,0,canvas.width,canvas.height);stars.forEach(s=>{const op=s.maxOp*(.5+.5*Math.sin(t*s.speed+s.phase));ctx.save();ctx.globalAlpha=op;ctx.fillStyle='#fff9e6';ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();ctx.restore();});requestAnimationFrame(drawStars);}
+resizeCanvas();createStars();window.addEventListener('resize',()=>{resizeCanvas();createStars();});requestAnimationFrame(drawStars);
+
+// ══════════════════════════════════════════════
+// NOISE TIERS
+// ══════════════════════════════════════════════
+const NOISE_TIERS = [
+  { tier:'tier-normal',    label:'Mild',      penalty:0,   scoreVal:5,  life:4000, desc:'Harmless nuisance' },
+  { tier:'tier-annoying',  label:'Annoying',  penalty:0.1, scoreVal:10, life:3000, desc:'Drains hold progress' },
+  { tier:'tier-dangerous', label:'Dangerous', penalty:0,   scoreVal:18, life:2200, desc:'Costs a life if missed' },
+  { tier:'tier-nightmare', label:'Nightmare', penalty:0.2, scoreVal:30, life:1800, desc:'Penalty + life loss' },
+];
+// Noise pools per tier
+const NOISE_POOL = {
+  'tier-normal':    ['📱','🎵','💡','🔦','🌬️'],
+  'tier-annoying':  ['🔔','🚗','🐕','🎺','🏍️'],
+  'tier-dangerous': ['👶','🌩️','🚨','😾','🔥'],
+  'tier-nightmare': ['💀','🔴','⚠️','🌪️','👹'],
+};
+
+const DREAM_WISPS = ['🌈','🦋','🐉','🏖️','🎪','🌸','🦄','🏔️','🌊','🎠','⭐','🌙','🎆','🌺','🦚'];
+const WISP_NAMES  = {'🌈':'Rainbow dream','🦋':'Butterfly dance','🐉':'Dragon flight','🏖️':'Beach dream','🎪':'Carnival night','🌸':'Cherry blossoms','🦄':'Unicorn meadow','🏔️':'Mountain peak','🌊':'Ocean depths','🎠':'Carousel ride','⭐':'Star journey','🌙':'Moonlit garden','🎆':'Fireworks dream','🌺':'Blossom festival','🦚':'Peacock parade'};
+
+const DEEP_ENEMIES = ['👻','🕷️','🦇','😈','🌑'];
+
+// ══════════════════════════════════════════════
+// RELICS — 25 TOTAL (common / rare / legendary / cursed)
+// ══════════════════════════════════════════════
+const RELICS = [
+  // COMMON
+  {id:'pillow',    icon:'🪶', name:'Feather Pillow',    rarity:'common',    cost:12, tags:{wisp_life:1500},              effect:'Dream wisps linger 1.5 s longer.'},
+  {id:'chamomile', icon:'🌼', name:'Chamomile Tea',     rarity:'common',    cost:10, tags:{tap_bonus:10},                effect:'Tapping any noise gives +10 pts instead of +5.'},
+  {id:'earplugs',  icon:'🔇', name:'Dream Earplugs',    rarity:'common',    cost:11, tags:{disturb_slow:.78},            effect:'Disturbances arrive 22% slower.'},
+  {id:'blanket',   icon:'🧣', name:'Weighted Blanket',  rarity:'common',    cost:12, tags:{hold_decay:.55},              effect:'Hold progress decays 45% slower.'},
+  {id:'nightlight',icon:'🕯️', name:'Soft Nightlight',   rarity:'common',    cost:11, tags:{start_heart:1},              effect:'Restore 1 ❤️ at the start of every night.'},
+  {id:'diary',     icon:'📓', name:'Sleep Diary',       rarity:'common',    cost:11, tags:{phase_bonus:75},              effect:'Phase completions award +75 pts.'},
+  {id:'teapot',    icon:'🫖', name:'Herbal Teapot',     rarity:'common',    cost:10, tags:{extra_life_5:1},              effect:'Gain +1 ❤️ after every 5th night survived.'},
+  {id:'slippers',  icon:'🩴', name:'Cloud Slippers',    rarity:'common',    cost:10, tags:{mouse_grace:.6},              effect:'Mouse movement in deep sleep is 40% less harmful.'},
+
+  // RARE
+  {id:'moonstone', icon:'🌙', name:'Moonstone',         rarity:'rare',      cost:22, tags:{dream_bonus:35},              effect:'Dream wisps give +35 pts instead of +20.'},
+  {id:'lavender',  icon:'💜', name:'Lavender Sachet',   rarity:'rare',      cost:20, tags:{still_faster:.7},             effect:'Deep sleep still-phase is 30% shorter.'},
+  {id:'starmap',   icon:'🗺️', name:'Star Map',          rarity:'rare',      cost:25, tags:{extra_wisp:1},                effect:'One extra dream wisp spawns per dreaming phase.'},
+  {id:'lullaby',   icon:'🎵', name:'Old Lullaby',       rarity:'rare',      cost:18, tags:{no_knockback:1},              effect:'Missed disturbances cannot knock back hold progress.'},
+  {id:'nightcap',  icon:'🎩', name:'Dream Nightcap',    rarity:'rare',      cost:20, tags:{disturb_life:1200},           effect:'Disturbances take 1.2 s longer to penalise you.'},
+  {id:'prism',     icon:'🔮', name:'Dream Prism',       rarity:'rare',      cost:24, tags:{nightmare_shield:1},          effect:'Nightmare noises (red) never cost a life, only progress.'},
+  {id:'compass',   icon:'🧭', name:'Sleeper\'s Compass',rarity:'rare',      cost:22, tags:{enemy_slow:.6},               effect:'Deep sleep enemies move 40% slower.'},
+
+  // LEGENDARY
+  {id:'journal',   icon:'📖', name:'Dream Journal',     rarity:'legendary', cost:40, tags:{dream_memory:12},             effect:'Each dream caught also grants +12 💧 Memory.'},
+  {id:'morpheus',  icon:'🌊', name:"Morpheus' Coin",    rarity:'legendary', cost:45, tags:{double_memory:2},             effect:'Night-end Memory reward is doubled.'},
+  {id:'nebula',    icon:'🌌', name:'Nebula Shard',      rarity:'legendary', cost:50, tags:{score_multi:1.5},             effect:'All score gains ×1.5.'},
+  {id:'sandclock', icon:'⏳', name:'Eternal Sand Clock',rarity:'legendary', cost:42, tags:{extra_phase:200},             effect:'Clearing all phases grants +200 bonus pts.'},
+  {id:'dreamcage', icon:'🪤', name:'Dream Cage',        rarity:'legendary', cost:48, tags:{enemy_dmg:1},                 effect:'Killing a deep sleep enemy gives +40 pts + 5 💧 Memory.'},
+
+  // CURSED (have a downside shown)
+  {id:'adrenaline',icon:'💊', name:'Nightmare Pills',   rarity:'cursed',    cost:8,  tags:{score_multi:2,start_heart:-1},effect:'All score ×2 — but you start each night with 1 fewer ❤️.',curse:'−1 ❤️ per night start.'},
+  {id:'sleepdebt', icon:'😵', name:'Sleep Debt',        rarity:'cursed',    cost:7,  tags:{dream_bonus:50,phase_bonus:0},effect:'Dream wisps give +50 pts — but phase completion gives 0 pts.',curse:'Phase bonus wiped to 0.'},
+  {id:'anxious',   icon:'😰', name:'Anxious Dreamer',   rarity:'cursed',    cost:6,  tags:{extra_wisp:2,disturb_fast:1.4},effect:'+2 extra wisps each dream phase — but disturbances come 40% faster.',curse:'Disturbances +40% faster.'},
+  {id:'glassbed',  icon:'🪞', name:'Glass Bed',         rarity:'cursed',    cost:9,  tags:{mouse_grace:0,still_faster:.4},effect:'Deep sleep phase is 60% shorter — but mouse movement is twice as harmful.',curse:'Mouse sensitivity ×2 in deep sleep.'},
+  {id:'lucid',     icon:'🌀', name:'Lucid Nightmare',   rarity:'cursed',    cost:10, tags:{dream_memory:25,wisp_life:-1000},effect:'+25 💧 per dream caught — but wisps vanish 1 s sooner.',curse:'Wisps disappear 1 s faster.'},
+];
+
+// ══════════════════════════════════════════════
+// PHASES
+// ══════════════════════════════════════════════
+const PHASES=[
+  {name:'DRIFTING OFF',id:'drift',emoji:['😐','😑','😴'],mission:'Hold the pillow to drift off',sub:'Quiet your mind...',mechanic:'hold',disturbances:true},
+  {name:'LIGHT SLEEP', id:'light',emoji:['😪','😴','🌙'],mission:'Tap away the noises',         sub:'Different noises — different dangers!',mechanic:'tap',disturbances:true},
+  {name:'DEEP SLEEP',  id:'deep', emoji:['😴','😴','✨'],mission:'Be perfectly still',            sub:'Don\'t move your mouse — enemies lurk...',mechanic:'still'},
+  {name:'DREAMING',    id:'dream',emoji:['🌙','⭐','💫'],mission:'Catch your dreams',             sub:'Tap the wisps before they fade!',mechanic:'dreams'},
+];
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let G={};
+function resetG(){
+  G={score:0,memory:0,lives:3,currentNight:1,sleepProgress:0,phaseIndex:0,
+     dreams:[],relics:[],nightDreams:0,gameActive:false,phaseComplete:false,
+     holdInterval:null,disturbInterval:null,stillInterval:null,quietInterval:null,
+     holdProgress:0,isHolding:false,_tapCb:null,
+     floaters:[],enemies:[],mouseMoveHandler:null,lastMouseMove:0,mouseMovePenalty:0,
+     nightsSurvived:0};
+}
+
+// ── relic helpers ──
+const hasR  = tag   => G.relics.some(r=>r.tags&&r.tags[tag]!==undefined);
+const valR  = (tag,def) => { const r=G.relics.find(r=>r.tags&&r.tags[tag]!==undefined); return r?r.tags[tag]:def; };
+const gain  = base  => { let v=base; if(hasR('score_multi')) v=Math.round(v*valR('score_multi',1)); return Math.round(v); };
+
+// difficulty scale (increases per night)
+function diff(base, growth=0.12){ return base * Math.pow(1+growth, G.currentNight-1); }
+
+// ══════════════════════════════════════════════
+// SCREENS
+// ══════════════════════════════════════════════
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-'+id).classList.add('active');}
+function showTitle(){clearAll();clearFloaters();showScreen('title');}
+
+function startGame(){
+  resetG();G.gameActive=true;
+  showScreen('game');
+  document.getElementById('dream-collector').innerHTML='';
+  updateHUD();
+  setTimeout(()=>startPhase(0),500);
+}
+
+function updateHUD(){
+  document.getElementById('hud-score').textContent   = G.score;
+  document.getElementById('hud-memory').textContent  = G.memory;
+  document.getElementById('hud-night').textContent   = 'Night '+G.currentNight;
+  document.getElementById('hud-lives').textContent   = '❤️'.repeat(Math.max(0,G.lives));
+  // Night progress bar cycles per night (visual only)
+  document.getElementById('night-fill').style.width  = ((G.currentNight % 10)/10*100)+'%';
+  renderTray('relic-tray');
+}
+
+function renderTray(id){
+  const t=document.getElementById(id);if(!t)return;
+  t.innerHTML=G.relics.map(r=>`<div class="relic-chip ${r.rarity}">${r.icon}<span> ${r.name}</span><div class="tip">${r.effect}${r.curse?'<br><span style="color:#fca5a5">⚠️ '+r.curse+'</span>':''}</div></div>`).join('');
+}
+
+// ══════════════════════════════════════════════
+// PHASE MANAGEMENT
+// ══════════════════════════════════════════════
+function startPhase(index){
+  if(!G.gameActive)return;
+  clearAll(); clearFloaters();
+  G.phaseIndex=index;G.phaseComplete=false;G.sleepProgress=0;
+
+  // Apply start_heart at night start
+  if(index===0){
+    const sh=valR('start_heart',0);
+    if(sh>0) G.lives=Math.min(3,G.lives+sh);
+    if(hasR('adrenaline')&&valR('start_heart',0)<0) G.lives=Math.max(1,G.lives-1);
+    G.nightDreams=0;
+  }
+
+  const ph=PHASES[index];
+  document.getElementById('phase-label').textContent  = ph.name;
+  document.getElementById('mission-text').textContent = ph.mission;
+  document.getElementById('mission-sub').textContent  = ph.sub;
+  document.getElementById('action-zone').innerHTML    = '';
+  updateRing(0,true);updateEmoji(0,ph);updateHUD();
+
+  if(ph.mechanic==='hold')   setupHold(ph);
+  if(ph.mechanic==='tap')    setupTap(ph);
+  if(ph.mechanic==='still')  setupStill(ph);
+  if(ph.mechanic==='dreams') setupDreams(ph);
+}
+
+// ══════════════════════════════════════════════
+// HOLD
+// ══════════════════════════════════════════════
+function setupHold(ph){
+  const z=document.getElementById('action-zone');
+  z.innerHTML=`<div class="action-prompt">Hold the pillow to fall asleep</div>
+    <div class="hold-btn" id="hbtn"><div class="hold-fill" id="hfill"></div><span>🛏️</span><span class="btn-label">hold</span></div>`;
+  const btn=document.getElementById('hbtn');
+  G.holdProgress=0;
+  const decayMult=valR('hold_decay',1);
+
+  const onStart=e=>{e.preventDefault();if(G.phaseComplete)return;G.isHolding=true;btn.classList.add('pressing');
+    G.holdInterval=setInterval(()=>{if(!G.isHolding||G.phaseComplete)return;
+      G.holdProgress=Math.min(1,G.holdProgress+0.018);G.sleepProgress=G.holdProgress;
+      updateRing(G.holdProgress);updateEmoji(G.holdProgress,ph);
+      document.getElementById('hfill').style.height=(G.holdProgress*100)+'%';
+      spawnSand(btn);if(G.holdProgress>=1)phaseComplete();
+    },80);
+  };
+  const onEnd=e=>{e.preventDefault();G.isHolding=false;btn.classList.remove('pressing');clearInterval(G.holdInterval);
+    if(!G.phaseComplete){const d=setInterval(()=>{if(G.isHolding||G.phaseComplete){clearInterval(d);return;}
+      G.holdProgress=Math.max(0,G.holdProgress-0.028*decayMult);updateRing(G.holdProgress);
+      document.getElementById('hfill').style.height=(G.holdProgress*100)+'%';
+      if(G.holdProgress<=0)clearInterval(d);
+    },80);}
+  };
+  btn.addEventListener('mousedown',onStart);btn.addEventListener('mouseup',onEnd);btn.addEventListener('mouseleave',onEnd);
+  btn.addEventListener('touchstart',onStart,{passive:false});btn.addEventListener('touchend',onEnd,{passive:false});
+  if(ph.disturbances)spawnDisturbs();
+}
+
+// ══════════════════════════════════════════════
+// TAP (LIGHT SLEEP) — floating, typed noises
+// ══════════════════════════════════════════════
+function setupTap(ph){
+  const z=document.getElementById('action-zone');
+  z.innerHTML=`<div class="action-prompt">🟢 Mild &nbsp; 🟡 Annoying &nbsp; 🟠 Dangerous &nbsp; 🔴 Nightmare<br><span style="opacity:.7">Click noises before time runs out!</span></div>`;
+  let needed=Math.floor(diff(10,0.15))+4, done=0;
+  G._tapCb=()=>{ done++;G.sleepProgress=done/needed;updateRing(G.sleepProgress);updateEmoji(G.sleepProgress,ph);if(G.sleepProgress>=1)phaseComplete(); };
+  // quiet auto-progress
+  G.quietInterval=setInterval(()=>{if(G.phaseComplete)return;
+    const floating=document.querySelectorAll('.float-disturb');
+    if(floating.length===0){done=Math.min(needed-1,done+0.2);G.sleepProgress=done/needed;updateRing(G.sleepProgress);updateEmoji(G.sleepProgress,ph);}
+  },400);
+  spawnDisturbs();
+}
+
+// ══════════════════════════════════════════════
+// FLOATING DISTURBANCE SPAWNER (fullscreen)
+// ══════════════════════════════════════════════
+function spawnDisturbs(){
+  const slowMult = hasR('disturb_slow') ? valR('disturb_slow',1) : 1;
+  const fastMult = hasR('anxious')      ? valR('disturb_fast',1) : 1;
+  const baseInterval = Math.max(700, 3200 - G.currentNight*200);
+  const interval = (baseInterval / slowMult) * fastMult;
+  const extraLife= hasR('disturb_life') ? valR('disturb_life',0) : 0;
+
+  G.disturbInterval=setInterval(()=>{
+    if(G.phaseComplete)return;
+    const existing=document.querySelectorAll('.float-disturb');
+    if(existing.length>=Math.min(3+Math.floor(G.currentNight/2),8))return;
+
+    // Weighted tier pick — higher nights = more dangerous
+    const tierWeights = pickTierWeights();
+    const tierData=weightedPick(tierWeights);
+    const pool=NOISE_POOL[tierData.tier];
+    const emoji=pool[Math.floor(Math.random()*pool.length)];
+
+    const el=document.createElement('div');
+    el.className=`float-disturb ${tierData.tier}`;
+    el.style.fontSize=`clamp(1.4rem,3.5vw,2rem)`;
+    el.style.position='fixed';
+
+    // Random screen position (avoid HUD top 140px)
+    const margin=60;
+    const gx=margin+Math.random()*(innerWidth-margin*2);
+    const gy=150+Math.random()*(innerHeight-220);
+    el.style.left=gx+'px'; el.style.top=gy+'px';
+
+    const inner=document.createElement('span');inner.textContent=emoji;
+    const label=document.createElement('div');label.className='noise-label';label.textContent=tierData.label;
+    el.appendChild(inner);el.appendChild(label);
+
+    const lifeMs=(tierData.life+extraLife)*Math.pow(.88,G.currentNight-1);
+
+    el.addEventListener('click',()=>{
+      el.remove();G.floaters=G.floaters.filter(f=>f!==el);
+      if(G._tapCb)G._tapCb();
+      // bonus based on tier
+      const tb=hasR('tap_bonus')?valR('tap_bonus',5):5;
+      const pts=gain(tb + tierData.scoreVal);
+      G.score+=pts;G.nightDreams+=pts;
+      spawnScorePop('+'+pts,gx,gy);updateHUD();
+      // annoying tier: had knockback effect, now removed on click
+    });
+    document.body.appendChild(el);
+    G.floaters.push(el);
+
+    // life timer
+    const timer=setTimeout(()=>{
+      if(!el.parentNode)return;
+      el.remove();G.floaters=G.floaters.filter(f=>f!==el);
+      if(G.phaseComplete)return;
+      // apply miss penalty
+      if(tierData.tier==='tier-dangerous'||tierData.tier==='tier-nightmare'){
+        if(tierData.tier==='tier-nightmare'&&!hasR('nightmare_shield')) loseLife();
+        else if(tierData.tier==='tier-dangerous') loseLife();
+      }
+      if(tierData.penalty>0&&!hasR('no_knockback')){
+        G.holdProgress=Math.max(0,G.holdProgress-tierData.penalty);
+        G.sleepProgress=G.holdProgress;updateRing(G.holdProgress);
+      }
+      flashNoise();
+    },lifeMs);
+    el._timer=timer;
+  },interval);
+}
+
+function pickTierWeights(){
+  const n=G.currentNight;
+  // Night 1: mostly mild. Night 10+: heavy nightmare
+  const normal    = Math.max(5,  40 - n*3);
+  const annoying  = Math.min(35, 20 + n*2);
+  const dangerous = Math.min(30, 10 + n*2);
+  const nightmare = Math.min(25, Math.max(0, n*2 - 5));
+  return [
+    {w:normal,   data:NOISE_TIERS[0]},
+    {w:annoying, data:NOISE_TIERS[1]},
+    {w:dangerous,data:NOISE_TIERS[2]},
+    {w:nightmare,data:NOISE_TIERS[3]},
+  ];
+}
+function weightedPick(arr){
+  const total=arr.reduce((s,a)=>s+a.w,0);
+  let r=Math.random()*total;
+  for(const a of arr){r-=a.w;if(r<=0)return a.data;}
+  return arr[arr.length-1].data;
+}
+
+// ══════════════════════════════════════════════
+// STILL (DEEP SLEEP) — mouse tracking + enemies
+// ══════════════════════════════════════════════
+function setupStill(ph){
+  const z=document.getElementById('action-zone');
+  z.innerHTML=`<div class="action-prompt" id="still-prompt">Don't move. Don't breathe.<br><span style="opacity:.6;font-size:.82em">Enemies appear above 20% — reach 0% to banish them.</span></div>
+    <div style="font-size:2rem;animation:dreamPulse 2s ease-in-out infinite;margin-top:.5rem">🌑</div>`;
+
+  const mouseSens=hasR('glassbed')?2.0:hasR('slippers')?valR('mouse_grace',.6):1.0;
+  const target=4000*valR('still_faster',1);
+  G.stillTime=0;
+
+  // Mouse move handler — lowers progress
+  let lastX=-1,lastY=-1;
+  G.mouseMoveHandler=(e)=>{
+    if(G.phaseComplete)return;
+    if(lastX<0){lastX=e.clientX;lastY=e.clientY;return;}
+    const dx=e.clientX-lastX, dy=e.clientY-lastY;
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    lastX=e.clientX;lastY=e.clientY;
+    if(dist<2)return;
+    // spawn cursor trail
+    spawnCursorDot(e.clientX,e.clientY);
+    const reduction=(dist*0.0015*mouseSens);
+    G.sleepProgress=Math.max(0,G.sleepProgress-reduction);
+    G.stillTime=G.sleepProgress*target;
+    updateRing(G.sleepProgress,true);
+    // If enemies active and progress hit 0: clear enemies, damage
+    if(G.sleepProgress<=0&&G.enemies.length>0){
+      banishEnemies();
+    }
+  };
+  document.addEventListener('mousemove',G.mouseMoveHandler);
+
+  // Enemy spawner — only when progress>20%
+  const maxEnemies=Math.min(1+Math.floor(G.currentNight/3),4);
+  const enemyInterval=Math.max(4000,10000-G.currentNight*600);
+  G.disturbInterval=setInterval(()=>{
+    if(G.phaseComplete)return;
+    if(G.sleepProgress>0.2&&G.enemies.length<maxEnemies){
+      spawnEnemy();
+    }
+  },enemyInterval);
+
+  // Progress ticker
+  G.stillInterval=setInterval(()=>{
+    if(G.phaseComplete)return;
+    if(G.enemies.length===0){
+      G.stillTime=Math.min(target,G.stillTime+80);
+      G.sleepProgress=Math.min(1,G.stillTime/target);
+    }
+    updateRing(G.sleepProgress);updateEmoji(G.sleepProgress,ph);
+    if(G.sleepProgress>=1){
+      document.removeEventListener('mousemove',G.mouseMoveHandler);
+      phaseComplete();
+    }
+  },80);
+}
+
+function spawnEnemy(){
+  const emoji=DEEP_ENEMIES[Math.floor(Math.random()*DEEP_ENEMIES.length)];
+  const el=document.createElement('div');
+  el.className='sleep-enemy vibrating';
+  const gx=80+Math.random()*(innerWidth-160);
+  const gy=160+Math.random()*(innerHeight-240);
+  el.style.left=gx+'px';el.style.top=gy+'px';
+  const slowMult=hasR('compass')?valR('enemy_slow',.6):1;
+  const floatX=(Math.random()*30-15)*slowMult+'px';
+  const floatY=(Math.random()*20-10)*slowMult+'px';
+  el.style.setProperty('--ef',(2+Math.random()*1.5)+'s');
+  el.style.setProperty('--ex',floatX);
+  el.style.setProperty('--ey',floatY);
+  el.textContent=emoji;
+  // Click to kill (player can click enemies)
+  el.addEventListener('click',()=>{
+    el.remove();G.enemies=G.enemies.filter(e=>e!==el);
+    if(hasR('dreamcage')){
+      G.score+=gain(40);G.memory+=5;G.nightDreams+=40;
+      spawnMemPop('+5💧',gx,gy);spawnScorePop('+40',gx,gy-28);updateHUD();
+    }
+    // flash green
+    const f=document.createElement('div');f.style.cssText='position:fixed;inset:0;background:rgba(74,222,128,.08);pointer-events:none;z-index:50;animation:noiseFlash .4s ease;';document.body.appendChild(f);setTimeout(()=>f.remove(),500);
+    // Enemy also vibrates screen — nudge mouse penalty
+    if(!G.phaseComplete){G.sleepProgress=Math.max(0,G.sleepProgress-.05);updateRing(G.sleepProgress,true);}
+  });
+  document.body.appendChild(el);
+  G.enemies.push(el);
+
+  // Enemies periodically shake the page (simulate mouse move penalty)
+  el._shake=setInterval(()=>{
+    if(G.phaseComplete||!el.parentNode){clearInterval(el._shake);return;}
+    if(G.sleepProgress>0){
+      G.sleepProgress=Math.max(0,G.sleepProgress-.02);
+      G.stillTime=G.sleepProgress*4000;
+      updateRing(G.sleepProgress,true);
+      spawnCursorDot(parseFloat(el.style.left)+20,parseFloat(el.style.top)+20);
+    }
+    if(G.sleepProgress<=0&&G.enemies.length>0) banishEnemies();
+  },600);
+}
+
+function banishEnemies(){
+  // Kill all enemies, flash, deal damage
+  G.enemies.forEach(e=>{clearInterval(e._shake);if(e.parentNode)e.remove();});
+  G.enemies=[];
+  loseLife();
+  const f=document.createElement('div');f.className='red-flash';document.body.appendChild(f);setTimeout(()=>f.remove(),600);
+  G.sleepProgress=0;G.stillTime=0;updateRing(0,true);
+}
+
+function spawnCursorDot(x,y){
+  const d=document.createElement('div');d.className='cursor-dot';d.style.left=x+'px';d.style.top=y+'px';document.body.appendChild(d);setTimeout(()=>d.remove(),600);
+}
+
+// ══════════════════════════════════════════════
+// DREAMS — floating wisps
+// ══════════════════════════════════════════════
+function setupDreams(ph){
+  const z=document.getElementById('action-zone');
+  z.innerHTML=`<div class="action-prompt">Tap the glowing wisps before they fade!<br><span style="opacity:.6">They drift anywhere on screen.</span></div>`;
+  const extra=(hasR('extra_wisp')?valR('extra_wisp',0):0)+(hasR('anxious')?valR('extra_wisp',0):0);
+  let needed=Math.floor(diff(4,0.2))+2+extra, caught=0;
+  const baseLife=3000+valR('wisp_life',0)+(hasR('lucid')?valR('wisp_life',0):0);
+
+  const spawn=()=>{
+    if(G.phaseComplete)return;
+    const e=DREAM_WISPS[Math.floor(Math.random()*DREAM_WISPS.length)];
+    const el=document.createElement('div');
+    el.className='float-wisp';
+    el.textContent=e;
+    el.style.setProperty('--wf',(3+Math.random()*2)+'s');
+    const gx=60+Math.random()*(innerWidth-120);
+    const gy=150+Math.random()*(innerHeight-220);
+    el.style.left=gx+'px';el.style.top=gy+'px';
+    el.addEventListener('click',()=>{
+      caught++;collectDream(e,gx,gy);el.remove();G.floaters=G.floaters.filter(f=>f!==el);
+      G.sleepProgress=Math.min(1,caught/needed);updateRing(G.sleepProgress);updateEmoji(G.sleepProgress,ph);
+      if(caught>=needed)phaseComplete();
+    });
+    document.body.appendChild(el);G.floaters.push(el);
+    const t=Math.max(1200,baseLife);
+    el._timer=setTimeout(()=>{if(el.parentNode){el.remove();G.floaters=G.floaters.filter(f=>f!==el);}},t);
+  };
+  G.disturbInterval=setInterval(spawn,1000);
+  setTimeout(spawn,200);
+}
+
+// ══════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════
+function updateRing(p,instant){
+  const el=document.getElementById('ring-fill'),pct=document.getElementById('sleep-pct');
+  if(!el||!pct)return;
+  el.style.transition=instant?'none':'stroke-dashoffset .45s ease';
+  el.style.strokeDashoffset=628*(1-Math.max(0,Math.min(1,p)));
+  pct.textContent=Math.round(Math.max(0,Math.min(1,p))*100)+'%';
+}
+function updateEmoji(p,ph){const i=p<.4?0:p<.8?1:2;const el=document.getElementById('sleep-emoji');if(el)el.textContent=ph.emoji[i];}
+function loseLife(){if(G.lives<=0||G.phaseComplete)return;G.lives--;updateHUD();flashNoise();if(G.lives<=0)gameOver();}
+function flashNoise(){const f=document.createElement('div');f.className='noise-flash';document.body.appendChild(f);setTimeout(()=>f.remove(),400);}
+function spawnSand(btn){if(Math.random()>.32)return;const r=btn.getBoundingClientRect();const p=document.createElement('div');p.className='sand-particle';p.textContent=['✨','⭐','💫','🌟'][~~(Math.random()*4)];p.style.left=(r.left+Math.random()*r.width)+'px';p.style.top=(r.top+Math.random()*r.height)+'px';document.body.appendChild(p);setTimeout(()=>p.remove(),2000);}
+function spawnMemPop(txt,x,y){const p=document.createElement('div');p.className='mem-pop';p.textContent=txt;p.style.left=(x||innerWidth/2)+'px';p.style.top=(y||innerHeight*.38)+'px';document.body.appendChild(p);setTimeout(()=>p.remove(),1500);}
+function spawnScorePop(txt,x,y){const p=document.createElement('div');p.className='score-pop';p.textContent=txt;p.style.left=(x||innerWidth/2)+'px';p.style.top=((y||innerHeight*.4)-20)+'px';document.body.appendChild(p);setTimeout(()=>p.remove(),1200);}
+
+function collectDream(e,x,y){
+  if(!G.dreams.includes(e))G.dreams.push(e);
+  const db=hasR('dream_bonus')?valR('dream_bonus',20):(hasR('sleepdebt')?valR('dream_bonus',20):20);
+  const realDb=hasR('sleepdebt')?50:db;
+  const pts=gain(realDb);G.score+=pts;G.nightDreams+=pts;
+  spawnScorePop('+'+pts,x,y);
+  if(hasR('dream_memory')||hasR('lucid')){const m=valR('dream_memory',0)+(hasR('lucid')?valR('dream_memory',0):0);if(m>0){G.memory+=m;spawnMemPop('+'+m+'💧',x,y+25);}}
+  updateHUD();
+  const b=document.createElement('div');b.className='dream-badge';b.textContent=e+' '+(WISP_NAMES[e]||'Mystery');
+  document.getElementById('dream-collector').appendChild(b);
+}
+
+function clearAll(){
+  clearInterval(G.holdInterval);clearInterval(G.disturbInterval);clearInterval(G.stillInterval);clearInterval(G.quietInterval);
+  if(G.mouseMoveHandler){document.removeEventListener('mousemove',G.mouseMoveHandler);G.mouseMoveHandler=null;}
+  G.enemies.forEach(e=>{clearInterval(e._shake);if(e.parentNode)e.remove();});G.enemies=[];
+  G.isHolding=false;G.phaseComplete=false;G._tapCb=null;
+}
+function clearFloaters(){
+  G.floaters.forEach(f=>{clearTimeout(f._timer);if(f.parentNode)f.remove();});G.floaters=[];
+  document.querySelectorAll('.float-disturb,.float-wisp,.sleep-enemy').forEach(e=>e.remove());
+}
+function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=~~(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
+
+// ══════════════════════════════════════════════
+// PHASE COMPLETE
+// ══════════════════════════════════════════════
+function phaseComplete(){
+  if(G.phaseComplete)return;G.phaseComplete=true;clearAll();clearFloaters();
+  const pb=hasR('sleepdebt')?0:hasR('diary')?valR('phase_bonus',50):50;
+  const pts=gain(pb);G.score+=pts;G.nightDreams+=pts;
+  updateHUD();updateRing(1);
+  const next=G.phaseIndex+1;
+  if(next>=PHASES.length)nightComplete();
+  else showTransition(PHASES[next],()=>startPhase(next));
+}
+
+function showTransition(nph,cb){
+  const ov=document.createElement('div');ov.className='overlay';
+  ov.innerHTML=`<div class="overlay-box"><div class="overlay-emoji">✨</div><h3 class="overlay-title">Deeper...</h3><p class="overlay-body">You drift into ${nph.name.toLowerCase()}.</p><button class="btn" id="tc">Continue</button></div>`;
+  document.body.appendChild(ov);
+  document.getElementById('tc').addEventListener('click',()=>{ov.remove();cb();});
+}
+
+// ══════════════════════════════════════════════
+// NIGHT COMPLETE
+// ══════════════════════════════════════════════
+function nightComplete(){
+  if(hasR('extra_phase')){const pts=gain(valR('extra_phase',200));G.score+=pts;G.nightDreams+=pts;}
+  const nb=gain(80+G.currentNight*20);G.score+=nb;G.nightDreams+=nb;
+  G.nightsSurvived++;
+
+  // Check teapot relic
+  if(hasR('teapot')&&G.nightsSurvived%5===0) G.lives=Math.min(3,G.lives+1);
+
+  let mem=Math.max(5,Math.floor(G.nightDreams/10));
+  if(hasR('double_memory'))mem=Math.floor(mem*valR('double_memory',2));
+  G.memory+=mem;updateHUD();
+
+  showMorningCard(mem,()=>showShop());
+}
+
+function showMorningCard(mem,cb){
+  const ov=document.createElement('div');ov.className='overlay';
+  ov.innerHTML=`
+    <div class="overlay-box">
+      <div class="overlay-emoji">🌅</div>
+      <h3 class="overlay-title">Morning — Night ${G.currentNight}</h3>
+      <p class="overlay-body">The sun rises on another restless night.<br>You drift further into the endless sleep...</p>
+      <div style="color:var(--memory);font-size:1.4rem;font-family:'Playfair Display',serif;font-style:italic;margin:.45rem 0">+${mem} 💧 Memory</div>
+      <p style="color:var(--lavender);font-size:.74rem;font-style:italic;margin-bottom:.9rem">1 Memory per 10 dream pts${hasR('double_memory')?" (×2 Morpheus' Coin)":""}</p>
+      <button class="btn" id="mc">🏪 Visit the Dream Shop</button>
+    </div>`;
+  document.body.appendChild(ov);
+  document.getElementById('mc').addEventListener('click',()=>{ov.remove();cb();});
+}
+
+// ══════════════════════════════════════════════
+// SHOP
+// ══════════════════════════════════════════════
+function showShop(){
+  const owned=G.relics.map(r=>r.id);
+  // Show 3 relics, weighted toward rarer on later nights
+  const common=shuffle(RELICS.filter(r=>r.rarity==='common'&&!owned.includes(r.id)));
+  const rare=shuffle(RELICS.filter(r=>r.rarity==='rare'&&!owned.includes(r.id)));
+  const legendary=shuffle(RELICS.filter(r=>r.rarity==='legendary'&&!owned.includes(r.id)));
+  const cursed=shuffle(RELICS.filter(r=>r.rarity==='cursed'&&!owned.includes(r.id)));
+
+  // Build weighted shop pool
+  let pool=[];
+  const n=G.currentNight;
+  // Always offer 1 cursed if available and past night 2
+  if(n>=2&&cursed.length)pool.push(cursed[0]);
+  // Fill rest with rarer picks as nights increase
+  const remaining=3-pool.length;
+  const rareChance=Math.min(.7,n*.08);
+  const legendChance=Math.min(.35,n*.04);
+  const candidates=[];
+  if(legendary.length&&Math.random()<legendChance)candidates.push(legendary[0]);
+  if(rare.length&&Math.random()<rareChance)candidates.push(rare[0]);
+  while(candidates.length<remaining&&common.length)candidates.push(common.shift());
+  while(candidates.length<remaining&&rare.length)candidates.push(rare.shift());
+  pool=[...pool,...candidates].slice(0,3);
+  if(pool.length===0)pool=shuffle([...common,...rare].filter(r=>!owned.includes(r.id))).slice(0,3);
+
+  const bought=new Set();
+  function render(){
+    const old=document.querySelector('.overlay');if(old)old.remove();
+    const ov=document.createElement('div');ov.className='overlay';
+    ov.innerHTML=`
+      <div class="overlay-box">
+        <div class="overlay-emoji">🏪</div>
+        <h3 class="overlay-title">The Dream Shop</h3>
+        <p class="overlay-body" style="margin-bottom:.25rem">Spend Memories on relics. Night ${G.currentNight+1} grows harder...</p>
+        <div class="shop-memory">💧 ${G.memory} <small>Memory</small></div>
+        <div class="shop-grid">${pool.map(r=>cardHtml(r,bought)).join('')}</div>
+        <div style="display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap">
+          <button class="btn" id="shop-go">Sleep on — Night ${G.currentNight+1}</button>
+          <button class="btn" id="shop-quit" style="background:transparent;border-color:rgba(124,107,181,.2);font-size:.85rem">End run</button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+    pool.forEach(r=>{
+      const card=document.getElementById('sc-'+r.id);if(!card)return;
+      if(bought.has(r.id)||G.memory<r.cost)return;
+      card.addEventListener('click',()=>{
+        if(G.memory<r.cost||bought.has(r.id))return;
+        G.memory-=r.cost;G.relics.push(r);bought.add(r.id);
+        updateHUD();render();
+      });
+    });
+    document.getElementById('shop-go').addEventListener('click',()=>{ov.remove();advanceNight();});
+    document.getElementById('shop-quit').addEventListener('click',()=>{ov.remove();showEndScreen();});
+  }
+  render();
+}
+
+function cardHtml(r,boughtSet){
+  const isBought=boughtSet.has(r.id),cantAfford=G.memory<r.cost&&!isBought;
+  let cls=`shop-card ${r.rarity}`;
+  if(isBought)cls+=' sold';else if(cantAfford)cls+=' cant-afford';else cls+=' buyable';
+  return `<div class="${cls}" id="sc-${r.id}">
+    <div class="card-icon">${r.icon}</div>
+    <div class="card-name">${r.name}</div>
+    <div class="card-desc">${r.effect}</div>
+    ${r.curse?`<div class="card-curse">⚠️ ${r.curse}</div>`:''}
+    <div class="card-rarity">${r.rarity}</div>
+    ${isBought?`<div class="card-bought">✓ owned</div>`:`<div class="card-cost">💧 ${r.cost}</div>`}
+  </div>`;
+}
+
+function advanceNight(){
+  G.currentNight++;
+  G.lives=Math.min(3,G.lives+1);
+  document.getElementById('dream-collector').innerHTML='';
+  updateHUD();startPhase(0);
+}
+
+// ══════════════════════════════════════════════
+// GAME OVER
+// ══════════════════════════════════════════════
+function gameOver(){
+  G.gameActive=false;clearAll();clearFloaters();
+  const ov=document.createElement('div');ov.className='overlay';
+  ov.innerHTML=`
+    <div class="overlay-box">
+      <div class="overlay-emoji">🌤️</div>
+      <h3 class="overlay-title">You woke up...</h3>
+      <p class="overlay-body">The night shattered after Night ${G.currentNight}.<br>You scored <strong style="color:var(--gold)">${G.score}</strong> dream points.</p>
+      <div class="relic-tray" style="justify-content:center;margin:.45rem 0">${G.relics.map(r=>`<div class="relic-chip ${r.rarity}">${r.icon} ${r.name}<div class="tip">${r.effect}</div></div>`).join('')}</div>
+      <div class="dream-collector" style="margin:.3rem 0">${G.dreams.slice(0,10).map(d=>`<div class="dream-badge">${d} ${WISP_NAMES[d]||'Dream'}</div>`).join('')}</div>
+      <button class="btn" style="margin-top:.65rem" onclick="this.closest('.overlay').remove();startGame()">Try again</button>
+      <button class="btn" style="margin-top:.35rem;background:transparent;border-color:rgba(124,107,181,.18)" onclick="showTitle();this.closest('.overlay').remove()">Give up</button>
+    </div>`;
+  document.body.appendChild(ov);
+}
+
+// ══════════════════════════════════════════════
+// END (voluntary quit)
+// ══════════════════════════════════════════════
+function showEndScreen(){
+  G.gameActive=false;clearAll();clearFloaters();showScreen('end');
+  const nights=G.currentNight;
+  const stars=nights>=8?3:nights>=4?2:1;
+  const titles=['Early Riser','Seasoned Dreamer','The Eternal Sleeper'];
+  const subs=['Not a bad first run. The night is deep.','You held the darkness for many nights.','You drifted into legend. The Sandman bows.'];
+  document.getElementById('end-emoji').textContent  =['😴','🌙','✨'][stars-1];
+  document.getElementById('end-title').textContent  =titles[stars-1];
+  document.getElementById('end-sub').textContent    =subs[stars-1];
+  document.getElementById('end-score').textContent  =G.score+' dream points';
+  document.getElementById('end-memory').textContent ='💧 '+G.memory+' Memory remaining';
+  document.getElementById('end-info').textContent   =G.dreams.length+' dreams · '+G.relics.length+' relics · '+nights+' nights survived';
+  const sr=document.getElementById('star-rating');sr.innerHTML='';
+  for(let i=0;i<3;i++){const s=document.createElement('div');s.className='star-item';s.textContent=i<stars?'⭐':'🌑';s.style.animationDelay=(i*.2)+'s';sr.appendChild(s);}
+  document.getElementById('end-collector').innerHTML=G.dreams.slice(0,12).map(d=>`<div class="dream-badge">${d} ${WISP_NAMES[d]||'Dream'}</div>`).join('');
+  renderTray('end-relics');
+}
+</script>
+</body>
+</html>
