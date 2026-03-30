@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DUO DASH — Teamwork Platformer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&display=swap');
+
+  :root {
+    --p1: #00f5d4;
+    --p2: #ff006e;
+    --bg: #0a0a0f;
+    --panel: #12121a;
+    --gold: #ffd60a;
+    --dim: #1e1e2e;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: #fff;
+    font-family: 'Press Start 2P', monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: clamp(1.2rem, 4vw, 2.2rem);
+    letter-spacing: 0.15em;
+    margin: 18px 0 4px;
+    background: linear-gradient(90deg, var(--p1), #fff, var(--p2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+  }
+
+  .subtitle {
+    font-size: 0.45rem;
+    letter-spacing: 0.3em;
+    color: #555;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+
+  .controls-bar {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 10px;
+    font-size: 0.38rem;
+    letter-spacing: 0.05em;
+  }
+
+  .p1-controls { color: var(--p1); }
+  .p2-controls { color: var(--p2); }
+
+  .key {
+    display: inline-block;
+    background: var(--dim);
+    border: 1px solid currentColor;
+    border-radius: 3px;
+    padding: 2px 5px;
+    font-size: 0.42rem;
+  }
+
+  #gameContainer {
+    position: relative;
+    border: 2px solid #222;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 0 40px rgba(0,245,212,0.08), 0 0 80px rgba(255,0,110,0.05);
+  }
+
+  canvas {
+    display: block;
+    image-rendering: pixelated;
+  }
+
+  .hud {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 800px;
+    padding: 8px 12px;
+    background: var(--panel);
+    border: 2px solid #222;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    font-size: 0.4rem;
+  }
+
+  .hud-p { display: flex; align-items: center; gap: 8px; }
+  .hud-p1 { color: var(--p1); }
+  .hud-p2 { color: var(--p2); }
+
+  .heart { font-size: 0.65rem; }
+  .dead-heart { opacity: 0.2; }
+
+  .level-info {
+    color: var(--gold);
+    text-align: center;
+    font-size: 0.38rem;
+    letter-spacing: 0.1em;
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10,10,15,0.88);
+    z-index: 10;
+    gap: 16px;
+  }
+
+  .overlay h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(1rem, 5vw, 2rem);
+    font-weight: 900;
+    letter-spacing: 0.1em;
+  }
+
+  .overlay p {
+    font-size: 0.4rem;
+    color: #888;
+    line-height: 2;
+    text-align: center;
+  }
+
+  .btn {
+    background: transparent;
+    border: 2px solid var(--gold);
+    color: var(--gold);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.5rem;
+    padding: 10px 22px;
+    cursor: pointer;
+    letter-spacing: 0.1em;
+    transition: all 0.15s;
+    margin-top: 8px;
+  }
+  .btn:hover { background: var(--gold); color: #000; }
+
+  .hint-box {
+    background: var(--dim);
+    border-left: 3px solid var(--gold);
+    padding: 8px 14px;
+    font-size: 0.35rem;
+    color: #aaa;
+    line-height: 2;
+    max-width: 340px;
+    text-align: left;
+  }
+  .hint-box span { color: var(--gold); }
+
+  #message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.65rem;
+    color: var(--gold);
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+    text-shadow: 0 0 20px var(--gold);
+    z-index: 5;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<h1>DUO DASH</h1>
+<div class="subtitle">cooperative platformer · teamwork required</div>
+
+<div class="controls-bar">
+  <div class="p1-controls">
+    P1 ▸ <span class="key">W</span> jump &nbsp; <span class="key">A</span><span class="key">D</span> move &nbsp; <span class="key">S</span> interact
+  </div>
+  <div class="p2-controls">
+    P2 ▸ <span class="key">↑</span> jump &nbsp; <span class="key">←</span><span class="key">→</span> move &nbsp; <span class="key">↓</span> interact
+  </div>
+</div>
+
+<div id="gameContainer">
+  <canvas id="c" width="800" height="480"></canvas>
+  <div id="message"></div>
+
+  <div class="overlay" id="startScreen">
+    <h2 style="background:linear-gradient(90deg,var(--p1),var(--p2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">DUO DASH</h2>
+    <p>Two players. One goal.<br>Neither can do it alone.</p>
+    <div class="hint-box">
+      <span>HOW TO WIN</span><br><br>
+      ⬡ Both players must reach the <span>EXIT DOOR</span><br>
+      ⬡ Step on <span>PRESSURE PLATES</span> to unlock gates<br>
+      ⬡ One player holds ─ the other passes<br>
+      ⬡ 3 lives each · don't fall into spikes!
+    </div>
+    <button class="btn" onclick="startGame()">▶ START GAME</button>
+  </div>
+
+  <div class="overlay" id="winScreen" style="display:none">
+    <h2 style="color:var(--gold)">LEVEL CLEAR!</h2>
+    <p id="winMsg">You escaped together!</p>
+    <button class="btn" onclick="nextLevel()">NEXT LEVEL ▶</button>
+  </div>
+
+  <div class="overlay" id="gameOverScreen" style="display:none">
+    <h2 style="color:var(--p2)">GAME OVER</h2>
+    <p>You need each other to survive.</p>
+    <button class="btn" onclick="restartLevel()">RETRY ↺</button>
+  </div>
+</div>
+
+<div class="hud">
+  <div class="hud-p hud-p1">
+    <span>P1</span>
+    <span id="p1hearts"></span>
+  </div>
+  <div class="level-info">
+    LEVEL <span id="lvlNum">1</span> &nbsp;·&nbsp; TEAMWORK IS KEY
+  </div>
+  <div class="hud-p hud-p2">
+    <span id="p2hearts"></span>
+    <span>P2</span>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = 800, H = 480;
+const TILE = 32;
+const G = 0.55;
+const JUMP = -13;
+
+// Colors
+const C = {
+  sky: '#0a0a0f',
+  ground: '#1a1a2e',
+  groundEdge: '#16213e',
+  p1: '#00f5d4',
+  p1dark: '#009988',
+  p2: '#ff006e',
+  p2dark: '#aa0044',
+  plate: '#ffd60a',
+  plateOff: '#554400',
+  gate: '#ff6b35',
+  gateLocked: '#cc3300',
+  spike: '#cc44aa',
+  exit: '#7fff00',
+  coin: '#ffd700',
+  moving: '#334',
+  spring: '#44ff88',
+  box: '#8B6914',
+  boxEdge: '#5c4009',
+};
+
+// ─── LEVEL DEFINITIONS ───────────────────────────────────────────────────────
+// t=tile(solid), p=pressure plate, g=gate(blocks until plate held), k=spike(kill),
+// e=exit, s=spring, b=movingPlatform marker, x=pushbox
+const LEVELS = [
+  {
+    name: "Level 1 — The Gate",
+    hint: "P1: hold the plate! P2: run through the gate!",
+    tiles: [
+      "################################",
+      "#                              #",
+      "#                              #",
+      "#  1        2                  #",
+      "#tttt   ttttttt    tttttt      #",
+      "#                              #",
+      "#  ptttt       ggg     e       #",
+      "#ttttttttttttttttttttttttttttt #",
+      "################################",
+    ],
+    p1Start: [2*TILE, 3*TILE],
+    p2Start: [9*TILE, 3*TILE],
+    plateTileX: 2, plateTileY: 6,
+    gateRange: {x1: 15*TILE, x2: 18*TILE, y: 6*TILE, h: TILE},
+    exitPos: [24*TILE, 6*TILE],
+  },
+  {
+    name: "Level 2 — Spring Crossing",
+    hint: "Use springs to reach new heights together!",
+    tiles: [
+      "################################",
+      "#                              #",
+      "#                   2          #",
+      "#   1           tttttttt       #",
+      "#  ttt     s            s      #",
+      "#       ttttt      ttt      e  #",
+      "#  p ttt       ggg         ttt #",
+      "#ttttttttttttttttttttttttttttt #",
+      "################################",
+    ],
+    p1Start: [2*TILE, 3*TILE],
+    p2Start: [18*TILE, 2*TILE],
+    plateTileX: 3, plateTileY: 6,
+    gateRange: {x1: 15*TILE, x2: 18*TILE, y: 6*TILE, h: TILE},
+    exitPos: [27*TILE, 5*TILE],
+  },
+  {
+    name: "Level 3 — Push & Pass",
+    hint: "Push the box onto the plate — then both escape!",
+    tiles: [
+      "################################",
+      "#                              #",
+      "#  1    x         2            #",
+      "#  ttttttttttt  tttttt         #",
+      "#                              #",
+      "#          p  ggg         e    #",
+      "#      tttttttttttttttttttttt  #",
+      "#ttttttt                    t  #",
+      "################################",
+    ],
+    p1Start: [2*TILE, 2*TILE],
+    p2Start: [16*TILE, 2*TILE],
+    boxStart: [6*TILE, 2*TILE],
+    plateTileX: 10, plateTileY: 5,
+    gateRange: {x1: 13*TILE, x2: 16*TILE, y: 5*TILE, h: TILE},
+    exitPos: [24*TILE, 5*TILE],
+  },
+];
+
+// ─── GAME STATE ───────────────────────────────────────────────────────────────
+let level = 0;
+let state = 'menu';
+let keys = {};
+let prevKeys = {};
+let plateHeld = false;
+let gateOpen = false;
+let bothAtExit = false;
+let msgTimer = 0;
+let msgText = '';
+let camera = {x: 0};
+
+let p1, p2, platforms, spikes, springs, box, exit_, plate, gate;
+
+// ─── PLAYER CLASS ─────────────────────────────────────────────────────────────
+class Player {
+  constructor(x, y, color, darkColor, label, keys_) {
+    this.sx = x; this.sy = y;
+    this.x = x; this.y = y;
+    this.w = 22; this.h = 26;
+    this.vx = 0; this.vy = 0;
+    this.onGround = false;
+    this.color = color;
+    this.dark = darkColor;
+    this.label = label;
+    this.keys = keys_;
+    this.lives = 3;
+    this.dead = false;
+    this.respawnTimer = 0;
+    this.atExit = false;
+    this.blinkTimer = 0;
+    this.eyeDir = 1;
+  }
+
+  reset(x, y) {
+    this.x = x || this.sx;
+    this.y = y || this.sy;
+    this.vx = 0; this.vy = 0;
+    this.onGround = false;
+    this.dead = false;
+    this.respawnTimer = 0;
+    this.atExit = false;
+    this.blinkTimer = 0;
+  }
+
+  update(others) {
+    if (this.dead) {
+      this.respawnTimer--;
+      if (this.respawnTimer <= 0 && this.lives > 0) {
+        this.reset(this.sx, this.sy);
+      }
+      return;
+    }
+
+    const speed = 4.2;
+    const leftKey  = this.keys.left;
+    const rightKey = this.keys.right;
+    const jumpKey  = this.keys.jump;
+
+    if (keys[leftKey])  { this.vx = -speed; this.eyeDir = -1; }
+    else if (keys[rightKey]) { this.vx = speed; this.eyeDir = 1; }
+    else this.vx *= 0.75;
+
+    if ((keys[jumpKey] && !prevKeys[jumpKey]) && this.onGround) {
+      this.vy = JUMP;
+    }
+
+    this.vy += G;
+    if (this.vy > 18) this.vy = 18;
+
+    this.x += this.vx;
+    this.resolveCollisionsX(platforms, others);
+
+    this.y += this.vy;
+    this.onGround = false;
+    this.resolveCollisionsY(platforms, others);
+
+    // Box pushing
+    if (box) {
+      const bx = box.x, by = box.y, bw = box.w, bh = box.h;
+      const px = this.x, py = this.y, pw = this.w, ph = this.h;
+      if (px + pw > bx && px < bx + bw && py + ph > by && py < by + bh) {
+        if (this.vx > 0 && px + pw - this.vx <= bx + 2) {
+          box.vx = this.vx;
+        } else if (this.vx < 0 && px - this.vx >= bx + bw - 2) {
+          box.vx = this.vx;
+        }
+      }
+    }
+
+    // Springs
+    springs.forEach(s => {
+      if (this.x + this.w > s.x && this.x < s.x + s.w &&
+          this.y + this.h >= s.y && this.y + this.h <= s.y + 12 && this.vy >= 0) {
+        this.vy = JUMP * 1.5;
+        s.anim = 6;
+      }
+    });
+
+    // Kill spikes
+    spikes.forEach(sp => {
+      if (rectsOverlap(this, sp)) this.die();
+    });
+
+    // Fall off
+    if (this.y > H + 50) this.die();
+
+    // World bounds
+    if (this.x < 0) this.x = 0;
+
+    // At exit?
+    this.atExit = !this.dead && exit_ && rectsOverlap(this, exit_);
+
+    this.blinkTimer++;
+    this.eyeDir = this.vx < 0 ? -1 : this.vx > 0 ? 1 : this.eyeDir;
+  }
+
+  resolveCollisionsX(plats, others) {
+    [...plats, ...(others || [])].forEach(p => {
+      if (!p || p === this) return;
+      if (rectsOverlap(this, p)) {
+        if (this.vx > 0) this.x = p.x - this.w;
+        else if (this.vx < 0) this.x = p.x + p.w;
+        this.vx = 0;
+      }
+    });
+    // Gate
+    if (gate && !gateOpen) {
+      const g = gate;
+      if (this.x + this.w > g.x && this.x < g.x + g.w && this.y + this.h > g.y && this.y < g.y + g.h) {
+        if (this.vx > 0) this.x = g.x - this.w;
+        else this.x = g.x + g.w;
+        this.vx = 0;
+      }
+    }
+    // Box
+    if (box && box !== this) {
+      if (rectsOverlap(this, box)) {
+        if (this.vx > 0) this.x = box.x - this.w;
+        else if (this.vx < 0) this.x = box.x + this.w;
+        this.vx = 0;
+      }
+    }
+  }
+
+  resolveCollisionsY(plats, others) {
+    [...plats, ...(others || [])].forEach(p => {
+      if (!p || p === this) return;
+      if (rectsOverlap(this, p)) {
+        if (this.vy > 0) {
+          this.y = p.y - this.h;
+          this.onGround = true;
+        } else {
+          this.y = p.y + p.h;
+        }
+        this.vy = 0;
+      }
+    });
+    // Gate
+    if (gate && !gateOpen) {
+      const g = gate;
+      if (this.x + this.w > g.x && this.x < g.x + g.w && this.y + this.h > g.y && this.y < g.y + g.h) {
+        if (this.vy > 0) { this.y = g.y - this.h; this.onGround = true; }
+        else this.y = g.y + g.h;
+        this.vy = 0;
+      }
+    }
+    // Box
+    if (box) {
+      if (rectsOverlap(this, box)) {
+        if (this.vy > 0) { this.y = box.y - this.h; this.onGround = true; }
+        else { this.y = box.y + box.h; }
+        this.vy = 0;
+      }
+    }
+  }
+
+  die() {
+    if (this.dead) return;
+    this.dead = true;
+    this.lives--;
+    this.respawnTimer = this.lives > 0 ? 90 : 999;
+    showMsg(this.label + ' DIED!');
+  }
+
+  draw(cx) {
+    if (this.dead) {
+      if (this.lives > 0 && Math.floor(this.respawnTimer / 8) % 2 === 0) {
+        ctx.globalAlpha = 0.3;
+        this.drawSprite(cx);
+        ctx.globalAlpha = 1;
+      }
+      return;
+    }
+    this.drawSprite(cx);
+  }
+
+  drawSprite(cx) {
+    const x = this.x - cx;
+    const y = this.y;
+    const w = this.w;
+    const h = this.h;
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(x + w/2, y + h + 3, w/2, 4, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // Body
+    ctx.fillStyle = this.dark;
+    ctx.fillRect(x, y + 4, w, h);
+    ctx.fillStyle = this.color;
+    ctx.fillRect(x + 2, y + 2, w - 4, h - 4);
+
+    // Helmet strip
+    ctx.fillStyle = this.dark;
+    ctx.fillRect(x + 3, y + 2, w - 6, 8);
+
+    // Eyes
+    const blink = Math.floor(this.blinkTimer / 60) % 8 === 0;
+    const ex = x + (this.eyeDir > 0 ? w - 9 : 5);
+    if (!blink) {
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(ex, y + 5, 5, 5);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(ex + (this.eyeDir > 0 ? 2 : 0), y + 6, 2, 3);
+    } else {
+      ctx.fillStyle = this.dark;
+      ctx.fillRect(ex, y + 7, 5, 2);
+    }
+
+    // Antenna
+    ctx.fillStyle = this.color;
+    ctx.fillRect(x + w/2 - 1, y - 6, 2, 8);
+    ctx.fillStyle = this.dark;
+    ctx.beginPath();
+    ctx.arc(x + w/2, y - 6, 3, 0, Math.PI*2);
+    ctx.fill();
+
+    // Label
+    ctx.fillStyle = this.color;
+    ctx.font = '7px "Press Start 2P"';
+    ctx.textAlign = 'center';
+    ctx.fillText(this.label, x + w/2, y - 10);
+    ctx.textAlign = 'left';
+
+    // Jetpack flash when jumping
+    if (this.vy < -2) {
+      ctx.fillStyle = this.color;
+      ctx.globalAlpha = 0.7;
+      ctx.fillRect(x + 2, y + h, 5, 6);
+      ctx.fillRect(x + w - 7, y + h, 5, 6);
+      ctx.globalAlpha = 1;
+    }
+  }
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function rectsOverlap(a, b) {
+  if (!a || !b) return false;
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+function showMsg(txt) {
+  msgText = txt;
+  msgTimer = 120;
+  const el = document.getElementById('message');
+  el.textContent = txt;
+  el.style.opacity = 1;
+}
+
+function updateHUD() {
+  const lives2Hearts = (l) =>
+    '❤️'.repeat(Math.max(0, l)) + (l < 3 ? '<span class="dead-heart">🖤</span>'.repeat(3-l) : '');
+  document.getElementById('p1hearts').innerHTML = lives2Hearts(p1.lives);
+  document.getElementById('p2hearts').innerHTML = lives2Hearts(p2.lives);
+}
+
+// ─── LEVEL SETUP ─────────────────────────────────────────────────────────────
+function loadLevel(idx) {
+  const lv = LEVELS[idx];
+  document.getElementById('lvlNum').textContent = idx + 1;
+  platforms = [];
+  spikes = [];
+  springs = [];
+  box = null;
+
+  lv.tiles.forEach((row, ry) => {
+    row.split('').forEach((ch, cx) => {
+      const rx = cx * TILE, ry2 = ry * TILE;
+      if (ch === 't') platforms.push({x: rx, y: ry2, w: TILE, h: TILE});
+      if (ch === '#') platforms.push({x: rx, y: ry2, w: TILE, h: TILE, wall: true});
+      if (ch === 'k') spikes.push({x: rx+4, y: ry2+8, w: TILE-8, h: TILE-8});
+      if (ch === 's') springs.push({x: rx+4, y: ry2+20, w: TILE-8, h: 12, anim: 0});
+    });
+  });
+
+  // Plate & gate
+  const pTileX = lv.plateTileX, pTileY = lv.plateTileY;
+  plate = {x: pTileX*TILE+4, y: pTileY*TILE+24, w: TILE-8, h: 8};
+  const gr = lv.gateRange;
+  gate = {x: gr.x1, y: gr.y, w: gr.x2 - gr.x1, h: gr.h + TILE*2};
+  exit_ = {x: lv.exitPos[0]+4, y: lv.exitPos[1], w: TILE-8, h: TILE};
+
+  // Box
+  if (lv.boxStart) {
+    box = {x: lv.boxStart[0], y: lv.boxStart[1], w: TILE, h: TILE, vx: 0, vy: 0, onGround: false};
+  }
+
+  gateOpen = false;
+  plateHeld = false;
+
+  p1.reset(lv.p1Start[0], lv.p1Start[1]);
+  p2.reset(lv.p2Start[0], lv.p2Start[1]);
+  p1.lives = 3; p2.lives = 3;
+
+  camera.x = 0;
+  showMsg(lv.hint);
+}
+
+function startGame() {
+  document.getElementById('startScreen').style.display = 'none';
+  state = 'playing';
+  level = 0;
+  initPlayers();
+  loadLevel(level);
+}
+
+function initPlayers() {
+  p1 = new Player(0, 0, C.p1, C.p1dark, 'P1', {left:'KeyA', right:'KeyD', jump:'KeyW', down:'KeyS'});
+  p2 = new Player(0, 0, C.p2, C.p2dark, 'P2', {left:'ArrowLeft', right:'ArrowRight', jump:'ArrowUp', down:'ArrowDown'});
+}
+
+function nextLevel() {
+  document.getElementById('winScreen').style.display = 'none';
+  level++;
+  if (level >= LEVELS.length) {
+    level = 0;
+    // Victory!
+    showFinalWin();
+    return;
+  }
+  loadLevel(level);
+  state = 'playing';
+}
+
+function showFinalWin() {
+  const ws = document.getElementById('winScreen');
+  ws.style.display = 'flex';
+  document.getElementById('winMsg').textContent = 'You completed ALL levels! True teamwork! 🎉';
+  state = 'win';
+}
+
+function restartLevel() {
+  document.getElementById('gameOverScreen').style.display = 'none';
+  loadLevel(level);
+  state = 'playing';
+}
+
+// ─── UPDATE BOX ──────────────────────────────────────────────────────────────
+function updateBox() {
+  if (!box) return;
+  box.vy += G;
+  box.x += box.vx;
+  box.vx *= 0.7;
+
+  // Collide with platforms
+  box.onGround = false;
+  platforms.forEach(p => {
+    if (box.x + box.w > p.x && box.x < p.x + p.w && box.y + box.h > p.y && box.y < p.y + p.h) {
+      if (box.vx > 0) box.x = p.x - box.w;
+      else if (box.vx < 0) box.x = p.x + p.w;
+      box.vx = 0;
+    }
+  });
+
+  box.y += box.vy;
+  platforms.forEach(p => {
+    if (box.x + box.w > p.x && box.x < p.x + p.w && box.y + box.h > p.y && box.y < p.y + p.h) {
+      if (box.vy > 0) { box.y = p.y - box.h; box.onGround = true; }
+      else box.y = p.y + p.h;
+      box.vy = 0;
+    }
+  });
+
+  if (box.y > H + 100) { box.y = -100; box.x = LEVELS[level].boxStart[0]; box.vy = 0; box.vx = 0; }
+}
+
+// ─── DRAW FUNCTIONS ───────────────────────────────────────────────────────────
+function drawPlatform(p, cx) {
+  const x = p.x - cx;
+  if (p.wall) {
+    ctx.fillStyle = '#111';
+    ctx.fillRect(x, p.y, p.w, p.h);
+    return;
+  }
+  // Ground tile
+  ctx.fillStyle = C.ground;
+  ctx.fillRect(x, p.y, p.w, p.h);
+  ctx.fillStyle = C.groundEdge;
+  ctx.fillRect(x, p.y, p.w, 4);
+  // grid lines
+  ctx.strokeStyle = '#1e1e3e';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, p.y, p.w, p.h);
+}
+
+function drawPlate(cx) {
+  if (!plate) return;
+  ctx.fillStyle = plateHeld ? C.plate : C.plateOff;
+  ctx.fillRect(plate.x - cx, plate.y, plate.w, plate.h);
+  // glow
+  if (plateHeld) {
+    ctx.shadowColor = C.plate;
+    ctx.shadowBlur = 15;
+    ctx.fillRect(plate.x - cx, plate.y, plate.w, plate.h);
+    ctx.shadowBlur = 0;
+  }
+  // label
+  ctx.fillStyle = plateHeld ? '#000' : '#888';
+  ctx.font = '5px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText('PLATE', plate.x + plate.w/2 - cx, plate.y - 3);
+  ctx.textAlign = 'left';
+}
+
+function drawGate(cx) {
+  if (!gate || gateOpen) return;
+  const x = gate.x - cx;
+  // Gate bars
+  for (let i = 0; i < gate.h; i += 8) {
+    const shade = i % 16 === 0 ? C.gateLocked : C.gate;
+    ctx.fillStyle = shade;
+    ctx.fillRect(x, gate.y + i, gate.w, 4);
+  }
+  ctx.fillStyle = C.gateLocked;
+  ctx.fillRect(x, gate.y, 4, gate.h);
+  ctx.fillRect(x + gate.w - 4, gate.y, 4, gate.h);
+  // Label
+  ctx.fillStyle = '#ff6b35';
+  ctx.font = '5px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText('GATE', gate.x + gate.w/2 - cx, gate.y - 3);
+  ctx.textAlign = 'left';
+}
+
+function drawExit(cx) {
+  if (!exit_) return;
+  const x = exit_.x - cx;
+  const t = Date.now() / 600;
+  ctx.fillStyle = C.exit;
+  ctx.shadowColor = C.exit;
+  ctx.shadowBlur = 10 + 6 * Math.sin(t);
+  ctx.fillRect(x, exit_.y, exit_.w, exit_.h + 6);
+  ctx.shadowBlur = 0;
+  // Arrow up
+  ctx.fillStyle = '#fff';
+  ctx.font = '8px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText('EXIT', x + exit_.w/2, exit_.y - 4);
+  ctx.textAlign = 'left';
+}
+
+function drawSpikes(cx) {
+  spikes.forEach(sp => {
+    ctx.fillStyle = C.spike;
+    const x = sp.x - cx;
+    // Triangle spikes
+    for (let i = 0; i < sp.w; i += 8) {
+      ctx.beginPath();
+      ctx.moveTo(x + i, sp.y + sp.h);
+      ctx.lineTo(x + i + 4, sp.y);
+      ctx.lineTo(x + i + 8, sp.y + sp.h);
+      ctx.closePath();
+      ctx.fill();
+    }
+  });
+}
+
+function drawSprings(cx) {
+  springs.forEach(s => {
+    const x = s.x - cx;
+    const squish = s.anim > 0 ? 0.5 : 1;
+    ctx.fillStyle = C.spring;
+    ctx.fillRect(x, s.y + s.h * (1 - squish), s.w, s.h * squish);
+    ctx.fillStyle = '#00aa44';
+    ctx.fillRect(x, s.y, s.w, 4);
+    if (s.anim > 0) s.anim--;
+  });
+}
+
+function drawBox(cx) {
+  if (!box) return;
+  const x = box.x - cx;
+  ctx.fillStyle = C.boxEdge;
+  ctx.fillRect(x, box.y, box.w, box.h);
+  ctx.fillStyle = C.box;
+  ctx.fillRect(x+3, box.y+3, box.w-6, box.h-6);
+  ctx.strokeStyle = C.boxEdge;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, box.y, box.w, box.h);
+  ctx.fillStyle = '#fff';
+  ctx.font = '7px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText('BOX', x + box.w/2, box.y + box.h/2 + 3);
+  ctx.textAlign = 'left';
+}
+
+function drawBackground(cx) {
+  // Gradient sky
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#06060f');
+  g.addColorStop(1, '#0d0d20');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  const sx = cx * 0.2;
+  for (let i = 0; i < 60; i++) {
+    const px = ((i * 137 + 42) % W);
+    const py = ((i * 97 + 13) % (H * 0.7));
+    const r = i % 3 === 0 ? 1.5 : 1;
+    ctx.beginPath();
+    ctx.arc((px - sx % W + W) % W, py, r, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+// ─── MAIN GAME LOOP ───────────────────────────────────────────────────────────
+function update() {
+  if (state !== 'playing') return;
+
+  // Update box
+  updateBox();
+
+  // Update players
+  p1.update([p2]);
+  p2.update([p1]);
+
+  // Plate logic — player OR box on plate
+  const onPlate = (actor) => {
+    if (!actor || actor.dead) return false;
+    return actor.x + actor.w > plate.x && actor.x < plate.x + plate.w &&
+           actor.y + actor.h >= plate.y && actor.y + actor.h <= plate.y + plate.h + 10;
+  };
+  plateHeld = onPlate(p1) || onPlate(p2) || (box && onPlate(box));
+  gateOpen = plateHeld;
+
+  // Check win
+  if (!p1.dead && !p2.dead && p1.atExit && p2.atExit) {
+    state = 'win';
+    const ws = document.getElementById('winScreen');
+    ws.style.display = 'flex';
+    if (level + 1 < LEVELS.length) {
+      document.getElementById('winMsg').textContent = 'Both escaped! Teamwork wins! 🚀';
+    } else {
+      document.getElementById('winMsg').textContent = 'You completed ALL levels! 🎉';
+    }
+  }
+
+  // Check game over
+  if (p1.lives <= 0 || p2.lives <= 0) {
+    state = 'gameover';
+    document.getElementById('gameOverScreen').style.display = 'flex';
+  }
+
+  // Camera tracks average of both players
+  const avgX = ((p1.dead ? p2.x : p1.x) + (p2.dead ? p1.x : p2.x)) / 2;
+  const target = avgX - W / 2;
+  camera.x += (target - camera.x) * 0.08;
+  camera.x = Math.max(0, Math.min(camera.x, 32*TILE - W));
+
+  // Fade message
+  if (msgTimer > 0) {
+    msgTimer--;
+    if (msgTimer <= 0) {
+      document.getElementById('message').style.opacity = 0;
+    }
+  }
+
+  updateHUD();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  if (state === 'menu') return;
+
+  const cx = camera.x;
+
+  drawBackground(cx);
+  platforms.forEach(p => drawPlatform(p, cx));
+  drawSpikes(cx);
+  drawSprings(cx);
+  drawPlate(cx);
+  drawGate(cx);
+  drawExit(cx);
+  drawBox(cx);
+
+  p1.draw(cx);
+  p2.draw(cx);
+
+  // Plate indicator line
+  if (!gateOpen && !gate?.open) {
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = 'rgba(255,214,10,0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(plate.x + plate.w/2 - cx, plate.y);
+    ctx.lineTo(gate.x + gate.w/2 - cx, gate.y + gate.h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+function loop() {
+  update();
+  draw();
+  prevKeys = {...keys};
+  requestAnimationFrame(loop);
+}
+
+// ─── INPUT ────────────────────────────────────────────────────────────────────
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  // Prevent arrow scroll
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+state = 'menu';
+initPlayers();
+loadLevel(0);
+loop();
+</script>
+</body>
+</html>
